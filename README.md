@@ -1,6 +1,6 @@
 # ESP32 Bluetooth/BLE to PS/2 keyboard adapter
 
-Project to adapt a Bluetooth or BLE keyboard to use on a computer with a compatible PS/2 keyboard connecto, wirelessly.
+Project to adapt a Bluetooth or BLE keyboard to use on a computer with a compatible PS/2 keyboard connector, wirelessly.
 Note that big DIN 5 pin connectors and Mini-DINs (the violet ones) are equally supported.
 
 
