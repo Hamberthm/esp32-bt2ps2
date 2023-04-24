@@ -26,7 +26,7 @@ const int CLK_PIN = 22;
 const int DATA_PIN = 23;
 ```
 
-There is no need to connect the 5 volts from the port if you wish to power the board over USB. For debugging I recommend you leave it disconnected. Once all is working and you don't want to debug anymore, the 5 volts from the port are enough to power the board over the Vin (regulated) pin, making this a pretty nead standalone device!
+There is no need to connect the 5 volts from the port if you wish to power the board over USB. For debugging I recommend you leave it disconnected. Once all is working and you don't want to debug anymore, the 5 volts from the port are enough to power the board over the Vin (regulated) pin, making this a pretty neat standalone device!
 
 Note: ESP32 is **unofficially** 5V tolerant, so you can directly connect PS/2 pins to the board, that's my setup on my rev v1 board and I had no problems. However, it is ideal to use a logic level converter like this:
 
