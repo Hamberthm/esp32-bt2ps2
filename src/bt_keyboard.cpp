@@ -585,19 +585,24 @@ BTKeyboard::handle_ble_device_result(esp_ble_gap_cb_param_t * param)
   int numBonded = esp_ble_get_bond_device_num();
   esp_ble_bond_dev_t* dev_list = (esp_ble_bond_dev_t*)malloc(sizeof(esp_ble_bond_dev_t) * numBonded); //bonded device information list
 
-  if ((esp_ble_get_bond_device_list(&numBonded, dev_list)) != ESP_OK) { //populate list
-      ESP_LOGE(TAG, "esp_ble_get_bond_device_list failed");
+  if (numBonded > 0) {
+      if ((esp_ble_get_bond_device_list(&numBonded, dev_list)) != ESP_OK) { //populate list
+          ESP_LOGE(TAG, "esp_ble_get_bond_device_list failed");
+      }
   }
 
   #if SCAN
 
   bool isLastBonded = false;
-  for (int i = 0; i < ESP_BD_ADDR_LEN; i++) {
-      if (param->scan_rst.bda[i] == dev_list[0].bd_addr[i])
-          isLastBonded = true;
-      else {
-          isLastBonded = false;
-          break;
+
+  if (numBonded > 0) {
+      for (int i = 0; i < ESP_BD_ADDR_LEN; i++) {
+          if (param->scan_rst.bda[i] == dev_list[0].bd_addr[i])
+              isLastBonded = true;
+          else {
+              isLastBonded = false;
+              break;
+          }
       }
   }
 
@@ -796,14 +801,16 @@ BTKeyboard::devices_scan( int seconds_wait_time)
   int numBonded = esp_ble_get_bond_device_num();
   ESP_LOGV(TAG, "Number of bonded devices: %d", numBonded);
 
-  esp_ble_bond_dev_t* dev_list = (esp_ble_bond_dev_t*)malloc(sizeof(esp_ble_bond_dev_t) * numBonded); //bonded device information list
 
-  if ((esp_ble_get_bond_device_list(&numBonded, dev_list)) != ESP_OK) { //populate list
-      ESP_LOGE(TAG, "esp_ble_get_bond_device_list failed");
+ esp_ble_bond_dev_t* dev_list = (esp_ble_bond_dev_t*)malloc(sizeof(esp_ble_bond_dev_t) * numBonded); //bonded device information list
+
+ if ((esp_ble_get_bond_device_list(&numBonded, dev_list)) != ESP_OK) { //populate list
+    ESP_LOGE(TAG, "esp_ble_get_bond_device_list failed");
+ }
+
+  if (numBonded > 0) {
+      ESP_LOGI(TAG, "Last bonded device: " ESP_BD_ADDR_STR, ESP_BD_ADDR_HEX(dev_list[0].bd_addr)); //last one is number 0 (as of ESP v5.0.1)
   }
-
-  ESP_LOGI(TAG, "Last bonded device: " ESP_BD_ADDR_STR, ESP_BD_ADDR_HEX(dev_list[0].bd_addr)); //last one is number 0 (as of ESP v5.0.1)
-
   //start scan for HID devices
 
   esp_hid_scan(seconds_wait_time, &results_len, &results);
@@ -811,7 +818,7 @@ BTKeyboard::devices_scan( int seconds_wait_time)
 
   //check if last bonded device is present
 
-  if (results_len) {
+  if (results_len && numBonded > 0) {
       ESP_LOGV(TAG, "Checking if bonded started...");
       esp_hid_scan_result_t* r = results;
       esp_hid_scan_result_t* cr = NULL;
