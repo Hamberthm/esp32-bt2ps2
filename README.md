@@ -27,9 +27,9 @@ const int DATA_PIN = 23;
 ```
 Note: Pin 12 & 13 are ideal to solder a connector so you can use Vin, GND, 13 and 12 all in a row. BEWARE that pin 12 is a strapping pin on the ESP32 and the module will FAIL to boot due to high signals from the PS/2 port. You can remove the strapping function of pin 12 by blowing an [eFuse](https://docs.espressif.com/projects/esptool/en/latest/esp32s2/espefuse/index.html) on your board. Use the following command:
 
-'''
+```
 python espefuse.py --port COM4 set_flash_voltage 3.3V
-'''
+```
 
 There is no need to connect the 5 volts from the port if you wish to power the board over USB. For debugging I recommend you leave it disconnected. Once all is working and you don't want to debug anymore, the 5 volts from the port are enough to power the board over the Vin (regulated) pin, making this a pretty neat standalone device!
 
@@ -45,14 +45,14 @@ Project works as-is under Arduino IDE. You need to have the latest Arduino Core 
 
 * https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html
 
-You can easily port it back to ESP32-IDF if you want. Just make the changes from the 'setup()'and 'loop()' functions to the structure IDF uses as entry point and format it accordingly. All or at least most of the header files should just work fine.
+You can easily port it back to ESP32-IDF if you want. Just make the changes from the `setup()` and `loop()` functions to the structure IDF uses as entry point and format it accordingly. All or at least most of the header files should just work fine.
 
 Once succesfully built and flashed, you're ready to rock! (your BLE keyboard on an ancient computer, that is).
 
 
 # Usage and debugging
 
-Once powered up and first of all, the code will create and init an 'esp32_ps2dev::PS2Keyboard' object, so it can start to talk to the computer as soon as possible. This is critical because during boot the BIOS can send different commands to the module to test the presence of the keyboard.
+Once powered up and first of all, the code will create and init an `esp32_ps2dev::PS2Keyboard` object, so it can start to talk to the computer as soon as possible. This is critical because during boot the BIOS can send different commands to the module to test the presence of the keyboard.
 
 After PS/2 init, the module scans for nearby Bluetooth and BLE devices. If the last bonded keyboard is in range, it will try to connect to it using the keys stored on the NVS flash, so no pairing is needed for every connection. If it doens't detect a previously bonded device, it will try to connect to the nearest keyboard in pairing mode. If both processes fail, it will wait one second and scan again until it finds anything.
 
@@ -64,7 +64,7 @@ Please note that pairing is only done after power up. If you wish to pair a new 
 
 In case something doesn't work, you'll need to debug. 
 
-If the blue light on the module lights up and your keyboard connects, but it doesn't work, then you'll need to enable debugging in the 'esp32-ps2dev.cpp' file using '#DEFINE \_ESP32_PS2DEV_DEBUG\_ Serial'. Check for "PS/2 command received" messages and see where it hangs, or what the BIOS doesn't like. 
+If the blue light on the module lights up and your keyboard connects, but it doesn't work, then you'll need to enable debugging in the `esp32-ps2dev.cpp` file using `#DEFINE \_ESP32_PS2DEV_DEBUG\_ Serial`. Check for "PS/2 command received" messages and see where it hangs, or what the BIOS doesn't like. 
 
 # TODO
  * Test on many keyboards.
