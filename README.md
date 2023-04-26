@@ -61,7 +61,7 @@ Once connected you can start using your keyboard, blue LED should be on.
 
 You can hot-disconnect the keyboard. The module will detect the disconnection and repeatedly try to reconnect, so it will be back online as soon as the keyboard gets up again. This is critical for keyboards that go to sleep and disconnect, or if you swap between computers using a multi-connection keyboard. 
 
-Please note that pairing is only done after power up. If you wish to pair a new device, please reset te module with the reset button or power off and on the computer (not just reset it, because we need a power cycle). Note that if a previously paired device is on and in range, it will always connect to it first.
+Please note that pairing is only done after power up. If you wish to pair a new device, please reset the module with the reset button or power off and on the computer (not just reset it, because we need a power cycle). Note that if a previously paired device is on and in range, it will always connect to it first.
 
 In case something doesn't work, you'll need to debug. 
 
