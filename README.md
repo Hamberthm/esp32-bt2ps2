@@ -59,7 +59,7 @@ Please note that pairing is only done after power up. If you wish to pair a new 
 
 In case something doesn't work, you'll need to debug. 
 
-If the blue light on the module lights up and your keyboard connects, but it doesn't work, then you'll need to enable debugging in the 'esp32-ps2dev.cpp' file using '#DEFINE _ESP32_PS2DEV_DEBUG_ serial'. Check for "PS/2 command received" messages and see where it hangs, or what the BIOS doesn't like. 
+If the blue light on the module lights up and your keyboard connects, but it doesn't work, then you'll need to enable debugging in the 'esp32-ps2dev.cpp' file using '#DEFINE \_ESP32_PS2DEV_DEBUG\_ serial'. Check for "PS/2 command received" messages and see where it hangs, or what the BIOS doesn't like. 
 
 # TODO
  * Test on many keyboards.
