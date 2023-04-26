@@ -32,7 +32,7 @@ Note: Pin 12 & 13 are ideal to solder a connector so you can use Vin, GND, 13 an
 python espefuse.py --port COM4 set_flash_voltage 3.3V
 ```
 
-There is no need to connect the 5 volts from the port if you wish to power the board over USB. For debugging I recommend you leave it disconnected. Once all is working and you don't want to debug anymore, the 5 volts from the port are enough to power the board over the Vin (regulated) pin, making this a pretty neat standalone device!
+There is no need to connect the 5 volts from the port if you wish to power the board over USB. For debugging I recommend you leave it disconnected, as you can end up back-feeding 5 volts back to the PS/2 port, bad things can happen. Once all is working and you don't want to debug anymore, the 5 volts from the port are enough to power the board over the Vin (regulated) pin, making this a pretty neat standalone device!
 
 Note: ESP32 is **unofficially** 5V tolerant, so you can directly connect PS/2 pins to the board, that's my setup on my rev v1 board and I had no problems. However, it is ideal to use a logic level converter like this:
 
