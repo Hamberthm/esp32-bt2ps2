@@ -25,6 +25,7 @@ You can change the DATA and CLK pins to whatever suits your fancy using these li
 const int CLK_PIN = 22;
 const int DATA_PIN = 23;
 ```
+Note: Pin 12 & 13 are ideal to solder a connector so you can use Vin, GND, 13 and 12 all in a row. BEWARE that pin 12 is a strapping pin on the ESP32 and the module will FAIL to boot due to high signals from the PS/2 port. You can remove the strapping function of pin 12 by blowing an eFuse
 
 There is no need to connect the 5 volts from the port if you wish to power the board over USB. For debugging I recommend you leave it disconnected. Once all is working and you don't want to debug anymore, the 5 volts from the port are enough to power the board over the Vin (regulated) pin, making this a pretty neat standalone device!
 
