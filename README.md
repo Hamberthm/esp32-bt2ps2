@@ -55,13 +55,13 @@ Once succesfully built and flashed, you're ready to rock! (your BLE keyboard on 
 
 Once powered up and first of all, the code will create and init an `esp32_ps2dev::PS2Keyboard` object, so it can start to talk to the computer as soon as possible. This is critical because during boot the BIOS can send different commands to the module to test the presence of the keyboard.
 
-After PS/2 init, the module scans for nearby Bluetooth and BLE devices. If the last bonded keyboard is in range, it will try to connect to it using the keys stored on the NVS flash, so no pairing is needed for every connection. If it doens't detect a previously bonded device, it will try to connect to the nearest keyboard in pairing mode. If both processes fail, it will wait one second and scan again until it finds anything.
+After PS/2 init, the module scans for nearby Bluetooth and BLE devices. If the last bonded keyboard is in range, it will try to connect to it using the keys stored on the NVS flash, so no pairing is needed for every connection. If it doesn't detect a previously bonded device, it will try to connect to the nearest keyboard in pairing mode. If both processes fail, it will wait one second and scan again until it finds anything.
 
 Once connected you can start using your keyboard, blue LED should be on.
 
 You can hot-disconnect the keyboard. The module will detect the disconnection and repeatedly try to reconnect, so it will be back online as soon as the keyboard gets up again. This is critical for keyboards that go to sleep and disconnect, or if you swap between computers using a multi-connection keyboard. 
 
-Please note that pairing is only done after power up. If you wish to pair a new device, please reset te module with the reset button or the computer. Note that if a previously paired device is on and in range, it will always connect to it first.
+Please note that pairing is only done after power up. If you wish to pair a new device, please reset te module with the reset button or power off and on the computer (not just reset it, because we need a power cycle). Note that if a previously paired device is on and in range, it will always connect to it first.
 
 In case something doesn't work, you'll need to debug. 
 
