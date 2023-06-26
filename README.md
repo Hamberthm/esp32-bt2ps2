@@ -86,10 +86,15 @@ BLE KEYBOARD PAIRING: Set keyboard in pairing mode and power on the board. No co
 BLUETOOTH CLASSIC KEYBOARD PAIRING (code pairing):
 
 1- Set keyboard in pairing mode and power on the board
+
 2- Wait until you see a short blast of quick flashes, then pay attention:
+
 3- For each code digit, the board will flash the LED the number of times equal to the digit
+
 4- Press each digit on the keyboard as you read them (do not wait until it finishes! Some keyboards have a timeout)
+
 5- If the digit is 0, a steady light will show for 1.5 seconds instead of the digit
+
 6- When you see the blast of quick flashes again, press ENTER
 
 OR you can always look at the code using the Serial monitor console, whatever you find easier, you fancy boy.
