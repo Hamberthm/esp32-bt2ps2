@@ -46,16 +46,26 @@ Note: ESP32 is **unofficially** 5V tolerant, so you can directly connect PS/2 pi
 
 # Building and flashing
 
+*Note there's a binary release available!
+
 Project works as-is under Visual Studio Code (2023). You need to have the Espressif IDF extension installed and the v5.1 of the ESP-IDF SDK. Workflow is as follows:
 
 1- Install Visual Studio Code
+
 2- On the left, open the extensions panel
+
 3- Search and install the Espressif IDF extension
+
 4- Open the command prompt pressing Ctrl+Shift+P
+
 5- Execute command "ESP-IDF: Configure ESP-IDF extension"
+
 6- Select Express, and under "Select ESP-IDF version" choose v5.1-rc2
+
 7- After installation, select File > Open Folder and open the ESP32-BT2PS2 project folder
+
 8- Start building by pressing Ctrl+E and then B, or using the Build button in the bottom bar
+
 9- If succesfully built, connect and flash your ESP32 board (Ctrl+E then F, or the flash button)
 
 Refer to the following link for more instructions:
