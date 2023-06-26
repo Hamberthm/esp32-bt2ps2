@@ -24,7 +24,7 @@ Connections:
 | GND       | GND      | black         |
 | Vin       | +5v      | red           |
 
-You can change the DATA and CLK pins to whatever suits your fancy using these lines in the .ino file:
+You can change the DATA and CLK pins to whatever suits your fancy using these lines in the main.cpp file:
 
 ```cpp
 const int CLK_PIN = 22;
