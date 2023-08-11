@@ -21,8 +21,8 @@ Never stop dreaming.
 static constexpr char const *TAG = "BTKeyboard";
 
 // PS/2 emulation variables
-const int CLK_PIN = 13; // IMPORTANT: Not all pins are suitable out-of-the-box. Check README for more info
-const int DATA_PIN = 12;
+const int CLK_PIN = 22; // IMPORTANT: Not all pins are suitable out-of-the-box. Check README for more info
+const int DATA_PIN = 23;
 esp32_ps2dev::PS2Keyboard keyboard(CLK_PIN, DATA_PIN);
 
 // BTKeyboard section
