@@ -1,14 +1,3 @@
-/*
-ESP32-BT2PS2
-Software for Espressif ESP32 chipsets for PS/2 emulation and Bluetooth BLE/Classic HID keyboard interfacing.
-Thanks to all the pioneers who worked on the code libraries that made this project possible, check them on the README!
-Copyright Humberto Möckel - Hamcode - 2023
-hamberthm@gmail.com
-Dedicated to all who love me and all who I love.
-Never stop dreaming.
-*/
-
-
 #include "..\include\globals.hpp"
 #include "nvs_flash.h"
 #include "driver/gpio.h"
@@ -16,19 +5,20 @@ Never stop dreaming.
 #include <iostream>
 #include <cmath>
 
+// #include <Arduino.h>              //
 #include "..\include\esp32-ps2dev.h" // Emulate a PS/2 device
 
 static constexpr char const *TAG = "BTKeyboard";
 
 // PS/2 emulation variables
-const int CLK_PIN = 22; // IMPORTANT: Not all pins are suitable out-of-the-box. Check README for more info
-const int DATA_PIN = 23;
+const int CLK_PIN = 13;
+const int DATA_PIN = 12;
 esp32_ps2dev::PS2Keyboard keyboard(CLK_PIN, DATA_PIN);
 
 // BTKeyboard section
 BTKeyboard bt_keyboard;
 
-int NumDigits(int x) //Returns number of digits in keyboard code
+int NumDigits(int x)
 {
     x = abs(x);
     return (x < 10 ? 1 : (x < 100 ? 2 : (x < 1000 ? 3 : (x < 10000 ? 4 : (x < 100000 ? 5 : (x < 1000000 ? 6 : (x < 10000000 ? 7 : (x < 100000000 ? 8 : (x < 1000000000 ? 9 : 10)))))))));
@@ -39,11 +29,11 @@ void pairing_handler(uint32_t pid)
     int x = (int)pid;
     std::cout << "Please enter the following pairing code, "
               << std::endl
-              << "followed by ENTER on your keyboard: "
+              << "followed with ENTER on your keyboard: "
               << pid
               << std::endl;
 
-    for (int i = 0; i < 10; i++) // Flash quickly many times to alert user of incoming code display
+    for (int i = 0; i < 10; i++)
     {
         gpio_set_level(GPIO_NUM_2, 1);
         vTaskDelay(50 / portTICK_PERIOD_MS);
@@ -51,15 +41,15 @@ void pairing_handler(uint32_t pid)
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 
-    int dig = NumDigits(x); // How many digits does our code have?
+    int dig = NumDigits(x);
 
     for (int i = 1; i <= dig; i++)
     {
         vTaskDelay(2000 / portTICK_PERIOD_MS);
         ESP_LOGI(TAG, "Codigo es %d ", pid);
-        int flash = ((int)((pid / pow(10, (dig - i)))) % 10); // This extracts one ditit at a time from our code
+        int flash = ((int)((pid / pow(10, (dig - i)))) % 10);
         ESP_LOGI(TAG, "Flashing %d times", flash);
-        for (int n = 0; n < flash; n++) // Flash the LED as many times as the digit
+        for (int n = 0; n < flash; n++)
         {
             gpio_set_level(GPIO_NUM_2, 1);
             vTaskDelay(200 / portTICK_PERIOD_MS);
@@ -67,7 +57,7 @@ void pairing_handler(uint32_t pid)
             vTaskDelay(200 / portTICK_PERIOD_MS);
         }
 
-        if (flash < 1) // If digit is 0, keep a steady light for 1.5sec
+        if (flash < 1)
         {
             gpio_set_level(GPIO_NUM_2, 1);
             vTaskDelay(1500 / portTICK_PERIOD_MS);
@@ -78,7 +68,7 @@ void pairing_handler(uint32_t pid)
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-    for (int i = 0; i < 10; i++) // Quick flashes indicate end of code display
+    for (int i = 0; i < 10; i++)
     {
 
         gpio_set_level(GPIO_NUM_2, 1);
@@ -93,6 +83,17 @@ extern "C"
 
     void app_main(void)
     {
+        //PIN CONFIGURATION (NEEDED IN ESP IDF, NOT IN ARDUINO)
+        gpio_config_t io_conf;
+        io_conf.intr_type = GPIO_INTR_DISABLE;
+        io_conf.mode = GPIO_MODE_OUTPUT;
+        io_conf.pin_bit_mask = (1ULL << DATA_PIN);
+        io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+        io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+        gpio_config(&io_conf);
+        io_conf.pin_bit_mask = (1ULL << CLK_PIN);
+        gpio_config(&io_conf);
+
         // init PS/2 emulation first
         // Serial.begin(115200); //only compatible in Arduino IDE
         gpio_reset_pin(GPIO_NUM_2);                       // using built-in LED for notifications
@@ -368,7 +369,7 @@ extern "C"
                 while (!BTKeyboard::isConnected)
                 {                                  // check connection
                     gpio_set_level(GPIO_NUM_2, 0); // disconnected
-                    bt_keyboard.quick_reconnect(); // try to reconnect
+                    bt_keyboard.quick_reconnect();
                     vTaskDelay(250 / portTICK_PERIOD_MS);
                 }
                 gpio_set_level(GPIO_NUM_2, 1);
