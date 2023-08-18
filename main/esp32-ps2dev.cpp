@@ -737,12 +737,13 @@ namespace esp32_ps2dev
     case Command::RESET: // reset
 #if defined(_ESP32_PS2DEV_DEBUG_)
       _ESP32_PS2DEV_DEBUG_.println("PS2Keyboard::reply_to_host: Reset command received");
-#endif       // _ESP32_PS2DEV_DEBUG_
-             // the while loop lets us wait for the host to be ready
+#endif // _ESP32_PS2DEV_DEBUG_
+       // the while loop lets us wait for the host to be ready
+      _data_reporting_enabled = false;
       ack(); // ack() provides delay, some systems need it
       while (write((uint8_t)Command::BAT_SUCCESS) != 0)
         delay(1);
-      _data_reporting_enabled = false;
+      _data_reporting_enabled = true; // some systems don't enable data reporting after issuing a RESET command, so we do it by default
       break;
     case Command::RESEND: // resend
 #if defined(_ESP32_PS2DEV_DEBUG_)
@@ -809,12 +810,16 @@ namespace esp32_ps2dev
 #if defined(_ESP32_PS2DEV_DEBUG_)
       _ESP32_PS2DEV_DEBUG_.println("PS2Keyboard::reply_to_host: Set/reset LEDs command received");
 #endif // _ESP32_PS2DEV_DEBUG_
-      while (write(0xAF) != 0)
+      delayMicroseconds(BYTE_INTERVAL_MICROS);
+      while (write(0xFA) != 0)
         delay(1);
-      if (!read(&val))
+      delayMicroseconds(BYTE_INTERVAL_MICROS);
+      if (!read(&val, 10))
       {
-        while (write(0xAF) != 0)
+        delayMicroseconds(BYTE_INTERVAL_MICROS);
+        while (write(0xFA) != 0)
           delay(1);
+        delayMicroseconds(BYTE_INTERVAL_MICROS);
         _led_scroll_lock = ((val & 1) != 0);
         _led_num_lock = ((val & 2) != 0);
         _led_caps_lock = ((val & 4) != 0);
@@ -822,6 +827,7 @@ namespace esp32_ps2dev
       return 1;
       break;
     default:
+      ack();
 #if defined(_ESP32_PS2DEV_DEBUG_)
       _ESP32_PS2DEV_DEBUG_.print("PS2Keyboard::reply_to_host: Unknown command received: ");
       _ESP32_PS2DEV_DEBUG_.println(host_cmd, HEX);
