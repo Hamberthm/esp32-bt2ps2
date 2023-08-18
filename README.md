@@ -1,4 +1,4 @@
-10/7/23: CURRENT RELEASE APPEARS TO BE BUGGY WHEN RECEIVING HOST COMPUTER COMMANDS. STAND BY FOR A FIX!
+18/8/23: Release v0.4 is out with best compatibility as ever and many, many bug fixes!
 
 26/6/23: PROJECT PORTED TO VS CODE, NOW BT CLASSIC WORKS (See "Building and flashing" below).
 
