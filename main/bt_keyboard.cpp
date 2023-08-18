@@ -1054,7 +1054,7 @@ void BTKeyboard::hidh_callback(void *handler_args, esp_event_base_t base, int32_
              param->input.report_id,
              param->input.length);
     ESP_LOG_BUFFER_HEX_LEVEL(TAG, param->input.data, param->input.length, ESP_LOG_DEBUG);
-    if (param->input.usage == ESP_HID_USAGE_KEYBOARD) // Filter report usages to kb only type
+    if ((param->input.usage == ESP_HID_USAGE_KEYBOARD) && (param->input.report_id == 1)) // Filter report usages to kb only type
     {
       bt_keyboard->push_key(param->input.data, param->input.length);
     }
@@ -1096,12 +1096,14 @@ void BTKeyboard::push_key(uint8_t *keys, uint8_t size)
   }
 
   uint8_t max = (size > MAX_KEY_COUNT + 2) ? MAX_KEY_COUNT : size - 2;
-  inf.keys[0] = inf.keys[1] = inf.keys[2] = 0;
+  // inf.keys[0] = inf.keys[1] = inf.keys[2] = 0; // No need to do this?
   for (int i = 0; i < max; i++)
   {
     inf.keys[i] = keys[i + 2];
   }
-
+  if (max < MAX_KEY_COUNT) // End flag in case our keyboard reports less keys than our max count
+    inf.keys[max] = 0;
+  ESP_LOG_BUFFER_HEX_LEVEL("KEYS PASSED TO MAIN: ", inf.keys, max, ESP_LOG_DEBUG);
   xQueueSend(event_queue, &inf, 0);
 }
 
