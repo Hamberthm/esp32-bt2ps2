@@ -13,6 +13,10 @@ Note that big DIN 5 pin connectors and Mini-DINs (the violet ones) are equally s
 
 YouTube demo: https://youtu.be/2PVjWfAAJFE
 
+<p align="center">
+  <img src="http://lsplab.com.ar/bt2ps2.jpg" width="700" title="Mini-DIN version">
+</p>
+
 # Electrical connections
 
 DIN and Mini-DIN connectors have similar pinout but in different arrangements.
