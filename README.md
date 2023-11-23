@@ -6,6 +6,8 @@ Working under latest ESP-IDF v5.1.
 
 FreeRTOS ticking rate of 1000hz is CRITICAL. Be sure to use the default SDKconfig file included!
 
+WARNING: This project is for use in a plain ESP-32 module with BLE and Bt Classic support. If you have another variant, you'll have to adapt the code.
+
 # ESP32 Bluetooth/BLE to PS/2 keyboard adapter
 
 Project to adapt a Bluetooth or BLE keyboard to use on a computer with a compatible PS/2 keyboard connector, wirelessly.
