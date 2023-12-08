@@ -1,3 +1,5 @@
+8/12/23: After testing it seems that the PS2 communication won't work if using external power, that is, external V+ and GND. You can connect the board to external power for pairing but make sure to use the PS2 port V+ and GND pins to power the board!
+
 18/8/23: Release v0.4 is out with best compatibility as ever and many, many bug fixes!
 
 26/6/23: PROJECT PORTED TO VS CODE, NOW BT CLASSIC WORKS (See "Building and flashing" below).
@@ -47,6 +49,8 @@ python espefuse.py --port COM4 set_flash_voltage 3.3V
 ```
 
 There is no need to connect the 5 volts from the port if you wish to power the board over USB. For debugging I recommend you leave it disconnected, as you can end up back-feeding 5 volts back to the PS/2 port, bad things can happen. Once all is working and you don't want to debug anymore, the 5 volts from the port are enough to power the board over the Vin (regulated) pin, making this a pretty neat standalone device!
+
+8/12/23: NOTE: After the port to VS Code the PS2 communication seems to only work if V+ and GND from the PS2 port are connected. So use external power only for pairing if you want, then switch to power from the final system.
 
 Note: ESP32 is **unofficially** 5V tolerant, so you can directly connect PS/2 pins to the board, that's my setup on my rev v1 board and I had no problems. However, it is ideal to use a logic level converter like this:
 
