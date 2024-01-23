@@ -4,7 +4,7 @@
 
 26/6/23: PROJECT PORTED TO VS CODE, NOW BT CLASSIC WORKS (See "Building and flashing" below).
 
-Working under latest ESP-IDF v5.1. *Developed and tested on the ESP32 DevKit rev 1 board, other variants may not work!*
+Working under latest ESP-IDF v5.1. **Developed and tested on the ESP32 DevKit rev 1 board, other variants may not work!**
 
 FreeRTOS ticking rate of 1000hz is CRITICAL. Be sure to use the default SDKconfig file included!
 
