@@ -19,12 +19,12 @@ YouTube demo: https://youtu.be/2PVjWfAAJFE
 
 Working under latest ESP-IDF v5.1. **Developed and tested on the ESP32 DevKit rev 1 board, other variants may not work!**
 
-WARNING: This project is for use in a plain ESP-32 module with BLE and Bt Classic support. If you have another variant, you'll have to adapt the code.
-
-26/6/23: PROJECT PORTED TO VS CODE, NOW BT CLASSIC WORKS (See "Building and flashing" below).
+WARNING: This project is for use in a plain ESP-32 module with BLE and BT Classic support. If you have another variant, you'll have to adapt the code.
 
 * ESP32 S3/C3 (BLE only boards): Check https://github.com/Hamberthm/esp32-bt2ps2/issues/3
 * USB-HID instead of PS/2: Check https://github.com/Hamberthm/esp32-bt2ps2/issues/4
+
+* 26/6/23: Project ported to VS code and enabled BT Classic support (See "Building and flashing" below).
 
 # Electrical connections
 
