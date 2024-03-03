@@ -2,13 +2,7 @@
 
 18/8/23: Release v0.4 is out with best compatibility as ever and many, many bug fixes!
 
-26/6/23: PROJECT PORTED TO VS CODE, NOW BT CLASSIC WORKS (See "Building and flashing" below).
-
-Working under latest ESP-IDF v5.1. **Developed and tested on the ESP32 DevKit rev 1 board, other variants may not work!**
-
 FreeRTOS ticking rate of 1000hz is CRITICAL. Be sure to use the default SDKconfig file included!
-
-WARNING: This project is for use in a plain ESP-32 module with BLE and Bt Classic support. If you have another variant, you'll have to adapt the code.
 
 # ESP32 Bluetooth/BLE to PS/2 keyboard adapter
 
@@ -20,6 +14,17 @@ YouTube demo: https://youtu.be/2PVjWfAAJFE
 <p align="center">
   <img src="http://lsplab.com.ar/bt2ps2.jpg" width="700" title="Mini-DIN version">
 </p>
+
+# Compatibility
+
+Working under latest ESP-IDF v5.1. **Developed and tested on the ESP32 DevKit rev 1 board, other variants may not work!**
+
+WARNING: This project is for use in a plain ESP-32 module with BLE and Bt Classic support. If you have another variant, you'll have to adapt the code.
+
+26/6/23: PROJECT PORTED TO VS CODE, NOW BT CLASSIC WORKS (See "Building and flashing" below).
+
+* ESP32 S3/C3 (BLE only boards): Check https://github.com/Hamberthm/esp32-bt2ps2/issues/3
+* USB-HID instead of PS/2: Check https://github.com/Hamberthm/esp32-bt2ps2/issues/4
 
 # Electrical connections
 
