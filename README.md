@@ -135,7 +135,7 @@ Note: For Legacy Mode, no LED output is possible at the moment, so we need to ch
 
 //
 
->>>>>>>>>>>>>>>>>> If paired and working correctly, the board should blink the LED with each key press on the keyboard.
+- If paired and working correctly, the board should blink the LED with each key press on the keyboard.
 
 Once connected you can start using your keyboard, blue LED should be on. Remove any USB power source and connect the board to the PS/2 compatible system and enjoy. Remember PS/2 is NOT a HOT-SWAP protocol, please only connect the board with the system totally OFF.
 
