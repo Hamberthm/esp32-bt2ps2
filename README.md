@@ -100,9 +100,10 @@ Once powered up and first of all, the code will create and init an `esp32_ps2dev
 
 After PS/2 init, the module scans for nearby Bluetooth and BLE devices. If the last bonded keyboard is in range, it will try to connect to it using the keys stored on the NVS flash, so no pairing is needed for every connection. If it doesn't detect a previously bonded device, it will try to connect to the nearest keyboard in pairing mode. If both processes fail, it will wait one second and scan again until it finds anything.
 
-BLE KEYBOARD PAIRING: Set keyboard in pairing mode and power on the board. No code entry required.
+### >> BLE KEYBOARD PAIRING: 
+Set keyboard in pairing mode and power on the board. No code entry required.
 
-BLUETOOTH CLASSIC KEYBOARD PAIRING (code pairing):
+### >> BLUETOOTH CLASSIC KEYBOARD PAIRING (code pairing):
 
 1- Set keyboard in pairing mode and power on the board
 
@@ -117,6 +118,20 @@ BLUETOOTH CLASSIC KEYBOARD PAIRING (code pairing):
 6- When you see the blast of quick flashes again, press ENTER
 
 OR you can always look at the code using the Serial monitor console, whatever you find easier, you fancy boy.
+
+### >> BLUETOOTH CLASSIC KEYBOARD PAIRING, LEGACY PROCEDURE (legacy code pairing):
+
+In older keyboards, the user must enter a custom code on the host device and then on the keyboard. Since we can't input it easily on the ESP32, the code is fixed to 1234.
+
+1- Set keyboard in pairing mode and power on the board
+
+2- Watch the Serial Ouput Console. Wait for the board finishing the scan and for the message "Waiting pairing code entry..."
+
+3- Type 1234 on the keyboard then press ENTER.
+
+Note: For Legacy Mode, no LED output is possible at the moment, so we need to check the serial console for the right time to enter the code. 
+
+//
 
 Once connected you can start using your keyboard, blue LED should be on. Connect the board to the computer or PS/2 compatible system and enjoy.
 
