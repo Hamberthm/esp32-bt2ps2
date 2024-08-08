@@ -100,6 +100,8 @@ Once powered up and first of all, the code will create and init an `esp32_ps2dev
 
 After PS/2 init, the module scans for nearby Bluetooth and BLE devices. If the last bonded keyboard is in range, it will try to connect to it using the keys stored on the NVS flash, so no pairing is needed for every connection. If it doesn't detect a previously bonded device, it will try to connect to the nearest keyboard in pairing mode. If both processes fail, it will wait one second and scan again until it finds anything.
 
+IMPORTANT: Is recommended to do the pairing to the keyboard BEFORE connecing the board to a PS/2 port. For this, connect a charger or power bank to the ESP's USB port.
+
 ### >> BLE KEYBOARD PAIRING: 
 Set keyboard in pairing mode and power on the board. No code entry required.
 
@@ -132,6 +134,8 @@ In older keyboards, the user must enter a custom code on the host device and the
 Note: For Legacy Mode, no LED output is possible at the moment, so we need to check the serial console for the right time to enter the code. 
 
 //
+
+>>>>>>>>>>>>>>>>>> If paired and working correctly, the board should blink the LED with each key press on the keyboard.
 
 Once connected you can start using your keyboard, blue LED should be on. Remove any USB power source and connect the board to the PS/2 compatible system and enjoy. Remember PS/2 is NOT a HOT-SWAP protocol, please only connect the board with the system totally OFF.
 
