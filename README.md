@@ -133,15 +133,15 @@ Note: For Legacy Mode, no LED output is possible at the moment, so we need to ch
 
 //
 
-Once connected you can start using your keyboard, blue LED should be on. Connect the board to the computer or PS/2 compatible system and enjoy.
+Once connected you can start using your keyboard, blue LED should be on. Remove any USB power source and connect the board to the PS/2 compatible system and enjoy. Remember PS/2 is NOT a HOT-SWAP protocol, please only connect the board with the system totally OFF.
 
-You can hot-disconnect the keyboard. The module will detect the disconnection and repeatedly try to reconnect, so it will be back online as soon as the keyboard gets up again. This is critical for keyboards that go to sleep and disconnect, or if you swap between computers using a multi-connection keyboard. 
+You can hot-disconnect the keyboard for models that support multiple devices hopping. The module will detect the disconnection and repeatedly try to reconnect while you're using other systems, so it will be back online as soon as the keyboard gets up to the ESP32 again. This is critical for keyboards that go to sleep and disconnect, or if you swap between computers using a multi-connection keyboard. 
 
 Please note that pairing is only done after power up. If you wish to pair a new device, please reset the module with the reset button or power off and on the computer (not just reset it, because we need a power cycle). Note that if a previously paired device is on and in range, it will always connect to it first.
 
 In case something doesn't work, you'll need to debug. 
 
-If the blue light on the module lights up and your keyboard connects, but it doesn't work, then you'll need to enable debugging in the `esp32-ps2dev.cpp` file using `#DEFINE _ESP32_PS2DEV_DEBUG_ *something*`. Check for "PS/2 command received" messages and see where it hangs, or what the BIOS doesn't like. 
+If the blue light on the module lights up and your keyboard connects, but it doesn't work, first of all reset your system. If it still doesn't work, then you'll need to enable debugging in the `esp32-ps2dev.cpp` file using `#DEFINE _ESP32_PS2DEV_DEBUG_ *something*` (replace "something" with the correct debug calls, you need to know C++ for this). Check for "PS/2 command received" messages and see where it hangs, or what the BIOS doesn't like. This is advanced so if you need help, make a new issue.
 
 # TODO
  * Test on many keyboards.
