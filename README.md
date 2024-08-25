@@ -1,8 +1,8 @@
-24/8/24: Mouse and Multimedia Key support is out for v0.6! Try it out: https://github.com/Hamberthm/esp32-bt2ps2/discussions/14
+10/7/23: CURRENT RELEASE APPEARS TO BE BUGGY WHEN RECEIVING HOST COMPUTER COMMANDS. STAND BY FOR A FIX!
 
-8/12/23: Remember to connect the PS2 port Ground to the board, it won't work if you leave it floating.
+26/6/23: PROJECT PORTED TO VS CODE, NOW BT CLASSIC WORKS (See "Building and flashing" below).
 
-18/8/23: Release v0.4 is out with best compatibility as ever and many, many bug fixes!
+Working under latest ESP-IDF v5.1.
 
 FreeRTOS ticking rate of 1000hz is CRITICAL. Be sure to use the default SDKconfig file included!
 
@@ -12,21 +12,6 @@ Project to adapt a Bluetooth or BLE keyboard to use on a computer with a compati
 Note that big DIN 5 pin connectors and Mini-DINs (the violet ones) are equally supported.
 
 YouTube demo: https://youtu.be/2PVjWfAAJFE
-
-<p align="center">
-  <img src="http://lsplab.com.ar/bt2ps2.jpg" width="700" title="Mini-DIN version">
-</p>
-
-# Compatibility
-
-Working under latest ESP-IDF v5.1. **Developed and tested on the ESP32 DevKit rev 1 board, other variants may not work!**
-
-WARNING: This project is for use in a plain ESP-32 module with BLE and BT Classic support. If you have another variant, you'll have to adapt the code.
-
-* ESP32 S3/C3 (BLE only boards): Check https://github.com/Hamberthm/esp32-bt2ps2/issues/3
-* USB-HID instead of PS/2: Check https://github.com/Hamberthm/esp32-bt2ps2/issues/4
-
-* 26/6/23: Project ported to VS code and enabled BT Classic support (See "Building and flashing" below).
 
 # Electrical connections
 
@@ -56,8 +41,6 @@ python espefuse.py --port COM4 set_flash_voltage 3.3V
 ```
 
 There is no need to connect the 5 volts from the port if you wish to power the board over USB. For debugging I recommend you leave it disconnected, as you can end up back-feeding 5 volts back to the PS/2 port, bad things can happen. Once all is working and you don't want to debug anymore, the 5 volts from the port are enough to power the board over the Vin (regulated) pin, making this a pretty neat standalone device!
-
-8/12/23: NOTE: Don't leave the GND cable from the PS2 port floating, otherwise communication won't work! Always connect GND cable to the board even if you're using external power.
 
 Note: ESP32 is **unofficially** 5V tolerant, so you can directly connect PS/2 pins to the board, that's my setup on my rev v1 board and I had no problems. However, it is ideal to use a logic level converter like this:
 
@@ -102,12 +85,9 @@ Once powered up and first of all, the code will create and init an `esp32_ps2dev
 
 After PS/2 init, the module scans for nearby Bluetooth and BLE devices. If the last bonded keyboard is in range, it will try to connect to it using the keys stored on the NVS flash, so no pairing is needed for every connection. If it doesn't detect a previously bonded device, it will try to connect to the nearest keyboard in pairing mode. If both processes fail, it will wait one second and scan again until it finds anything.
 
-IMPORTANT: Is recommended to do the pairing to the keyboard BEFORE connecing the board to a PS/2 port. For this, connect a charger or power bank to the ESP's USB port.
+BLE KEYBOARD PAIRING: Set keyboard in pairing mode and power on the board. No code entry required.
 
-### >> BLE KEYBOARD PAIRING: 
-Set keyboard in pairing mode and power on the board. No code entry required.
-
-### >> BLUETOOTH CLASSIC KEYBOARD PAIRING (code pairing):
+BLUETOOTH CLASSIC KEYBOARD PAIRING (code pairing):
 
 1- Set keyboard in pairing mode and power on the board
 
@@ -123,31 +103,15 @@ Set keyboard in pairing mode and power on the board. No code entry required.
 
 OR you can always look at the code using the Serial monitor console, whatever you find easier, you fancy boy.
 
-### >> BLUETOOTH CLASSIC KEYBOARD PAIRING, LEGACY PROCEDURE (legacy code pairing):
+Once connected you can start using your keyboard, blue LED should be on. Connect the board to the computer or PS/2 compatible system and enjoy.
 
-In older keyboards, the user must enter a custom code on the host device and then on the keyboard. Since we can't input it easily on the ESP32, the code is fixed to 1234.
-
-1- Set keyboard in pairing mode and power on the board
-
-2- Watch the Serial Ouput Console. Wait for the board finishing the scan and for the message "Waiting pairing code entry..."
-
-3- Type 1234 on the keyboard then press ENTER.
-
-Note: For Legacy Mode, no LED output is possible at the moment, so we need to check the serial console for the right time to enter the code. 
-
-//
-
-- If paired and working correctly, the board should blink the LED with each key press on the keyboard.
-
-Once connected you can start using your keyboard, blue LED should be on. Remove any USB power source and connect the board to the PS/2 compatible system and enjoy. Remember PS/2 is NOT a HOT-SWAP protocol, please only connect the board with the system totally OFF.
-
-You can hot-disconnect the keyboard for models that support multiple devices hopping. The module will detect the disconnection and repeatedly try to reconnect while you're using other systems, so it will be back online as soon as the keyboard gets up to the ESP32 again. This is critical for keyboards that go to sleep and disconnect, or if you swap between computers using a multi-connection keyboard. 
+You can hot-disconnect the keyboard. The module will detect the disconnection and repeatedly try to reconnect, so it will be back online as soon as the keyboard gets up again. This is critical for keyboards that go to sleep and disconnect, or if you swap between computers using a multi-connection keyboard. 
 
 Please note that pairing is only done after power up. If you wish to pair a new device, please reset the module with the reset button or power off and on the computer (not just reset it, because we need a power cycle). Note that if a previously paired device is on and in range, it will always connect to it first.
 
 In case something doesn't work, you'll need to debug. 
 
-If the blue light on the module lights up and your keyboard connects, but it doesn't work, first of all reset your system. If it still doesn't work, then you'll need to enable debugging in the `esp32-ps2dev.cpp` file using `#DEFINE _ESP32_PS2DEV_DEBUG_ *something*` (replace "something" with the correct debug calls, you need to know C++ for this). Check for "PS/2 command received" messages and see where it hangs, or what the BIOS doesn't like. This is advanced so if you need help, make a new issue.
+If the blue light on the module lights up and your keyboard connects, but it doesn't work, then you'll need to enable debugging in the `esp32-ps2dev.cpp` file using `#DEFINE _ESP32_PS2DEV_DEBUG_ *something*`. Check for "PS/2 command received" messages and see where it hangs, or what the BIOS doesn't like. 
 
 # TODO
  * Test on many keyboards.
