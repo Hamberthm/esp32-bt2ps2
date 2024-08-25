@@ -6,7 +6,7 @@
 
 FreeRTOS ticking rate of 1000hz is CRITICAL. Be sure to use the default SDKconfig file included!
 
-# ESP32 Bluetooth/BLE to PS/2 keyboard adapter
+# ESP32 Bluetooth/BLE to PS/2 keyboard/mouse adapter
 
 Project to adapt a Bluetooth or BLE keyboard to use on a computer with a compatible PS/2 keyboard connector, wirelessly.
 Note that big DIN 5 pin connectors and Mini-DINs (the violet ones) are equally supported.
