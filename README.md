@@ -1,8 +1,8 @@
 24/8/24: Mouse and Multimedia Key support is out for v0.6! Try it out: https://github.com/Hamberthm/esp32-bt2ps2/discussions/14
 
-8/12/23: Remember to connect the PS2 port Ground to the board, it won't work if you leave it floating.
+*README FOR v0.6 IS IN PRODUCTION, PLEASE REFER TO THE RELEASE NOTES ON THE RELEASE PAGE* 
 
-18/8/23: Release v0.4 is out with best compatibility as ever and many, many bug fixes!
+8/12/23: Remember to connect the PS2 port Ground to the board, it won't work if you leave it floating.
 
 FreeRTOS ticking rate of 1000hz is CRITICAL. Be sure to use the default SDKconfig file included!
 
