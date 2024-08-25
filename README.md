@@ -34,12 +34,12 @@ Please use a multimeter and online info to make your cable. Beware of voltage pr
 
 Connections:
 
-| ESP32 pin | PS/2 pin | example color |
-| --------- | -------- | ------------- |
-| 23 or any | DATA     | orange        | ---> Repeat on other pin for mouse bus
-| 22 or any | CLK      | white         | ---> Repeat on other pin for mouse bus
-| GND       | GND      | black         | ---> Always connect!
-| Vin       | +5v      | red           | ---> Disconnect if using USB power!
+| ESP32 pin | PS/2 pin | example color | Notes                              |
+| --------- | -------- | ------------- |  --------------------------------- |
+| 23 or any | DATA     | orange        | Repeat on other pin for mouse bus  |
+| 22 or any | CLK      | white         | Repeat on other pin for mouse bus  |
+| GND       | GND      | black         | Always connect!                    |
+| Vin       | +5v      | red           | Disconnect if using USB power!     |
 
 You can change the DATA and CLK pins to whatever suits your fancy using these lines in the main.cpp file:
 
