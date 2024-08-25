@@ -17,6 +17,8 @@ YouTube demo: https://youtu.be/2PVjWfAAJFE
 
 # Compatibility
 
+Tested Bluetooth Keyboards and Mice (Please add your own!): https://1drv.ms/x/s!AlKre4_rNmpJiYpl1v4KcbK1Pm77zA?e=0I6QRB
+
 Working under latest ESP-IDF v5.3, compiled on Visual Studio Code. Multi-device support may not work on lower versions of the SDK.
 
 **Developed and tested on the ESP32 DevKit rev 1 board, other variants may not work!**
