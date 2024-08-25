@@ -41,6 +41,10 @@
 #include "esp_gatts_api.h"
 #include "esp_gatt_defs.h"
 #include "esp_wifi.h"
+
+#include <vector>
+#include <map>
+
 // #include "esp32-hal-bt.h"
 
 class BTKeyboard
@@ -75,6 +79,35 @@ public:
   {
     KeyModifier modifier;
     uint8_t keys[MAX_KEY_COUNT];
+  };
+
+  struct KeyInfo_CCONTROL // container for 16-bit CCONTROL Usage Codes
+  {
+    uint16_t keys[MAX_KEY_COUNT];
+  };
+
+  struct Mouse_Control
+  {
+    union
+    {
+      int32_t mouse_x_long = 0;
+      int16_t mouse_x;
+      int8_t mouse_x_short;
+    };
+    union
+    {
+      int32_t mouse_y_long = 0;
+      int16_t mouse_y;
+      int8_t mouse_y_short;
+    };
+    union
+    {
+      int32_t mouse_w_long = 0;
+      int16_t mouse_w;
+      int8_t mouse_w_short;
+    };
+
+    uint8_t mouse_buttons = 0;
   };
 
 private:
@@ -125,6 +158,105 @@ private:
     };
   };
 
+  typedef struct esp_hidh_dev_report_s // stealed from stack
+  {
+    struct esp_hidh_dev_report_s *next;
+    uint8_t map_index;     // the index of the report map
+    uint8_t report_id;     // the id of the report
+    uint8_t report_type;   // input, output or feature
+    uint8_t protocol_mode; // boot or report
+    size_t value_len;      // maximum len of value by report map
+    esp_hid_usage_t usage; // generic, keyboard or mouse
+    // BLE properties
+    uint16_t handle;     // handle to the value
+    uint16_t ccc_handle; // handle to client config
+    uint8_t permissions; // report permissions
+  } esp_hidh_dev_report_t;
+
+  typedef struct
+  {
+    uint16_t usage_page = 0;
+    uint16_t usage = 0;
+    uint16_t inner_usage_page = 0;
+    uint16_t inner_usage = 0;
+    uint8_t report_id = 0;
+    uint16_t input_len = 0;
+    uint16_t output_len = 0;
+    uint16_t feature_len = 0;
+    uint32_t logical_minimum = 0;
+    uint32_t logical_maximum = 0;
+    uint32_t usage_minimum = 0;
+    uint32_t usage_maximum = 0;
+    bool contains_array = false;
+    uint16_t mouse_x_bit_index = 0;
+    uint16_t mouse_x_lenght = 0;
+    uint16_t mouse_y_bit_index = 0;
+    uint16_t mouse_y_lenght = 0;
+    uint16_t mouse_w_bit_index = 0;
+    uint16_t mouse_w_lenght = 0;
+    uint16_t mouse_buttons_bit_index = 0;
+    uint16_t mouse_buttons_amount = 0;
+  } hid_report_params_t;
+
+  typedef struct
+  {
+    uint8_t report_id = 0;
+    uint16_t input_len = 0;
+    uint32_t logical_minimum = 0;
+    uint32_t logical_maximum = 0;
+    uint32_t usage_minimum = 0;
+    uint32_t usage_maximum = 0;
+    uint16_t report_count = 0;
+    bool contains_array = false;
+    std::vector<uint16_t> array_usages;
+  } hid_report_multimedia_control;
+
+  typedef struct
+  {
+    uint8_t report_id = 0;
+    uint16_t input_len = 0;
+    uint16_t mouse_x_byte_index = 0;
+    uint16_t mouse_x_byte_lenght = 0;
+    uint16_t mouse_y_byte_index = 0;
+    uint16_t mouse_y_byte_lenght = 0;
+    uint16_t mouse_w_byte_index = 0;
+    uint16_t mouse_w_byte_lenght = 0;
+    uint16_t mouse_buttons_byte_index = 0;
+    uint16_t mouse_buttons_amount = 0;
+  } hid_report_mouse;
+
+  static std::map<std::pair<esp_hidh_dev_t *, uint16_t>, hid_report_multimedia_control> multimedia_reports;
+  static std::map<std::pair<esp_hidh_dev_t *, uint16_t>, hid_report_mouse> mouse_reports;
+  static KeyInfo infoKey;
+
+  typedef enum
+  {
+    PARSE_WAIT_USAGE_PAGE,
+    PARSE_WAIT_USAGE,
+    PARSE_WAIT_COLLECTION_APPLICATION,
+    PARSE_WAIT_END_COLLECTION
+  } s_parse_step_t;
+
+  static s_parse_step_t s_parse_step;
+  static uint8_t s_collection_depth;
+  static hid_report_params_t s_report_params;
+  static hid_report_params_t s_report_params_empty;
+  static uint16_t s_report_size;
+  static uint16_t s_report_count;
+  static int s_usages_count;
+  static std::vector<uint16_t> temp_usages_array;
+
+  typedef struct
+  {
+    uint8_t cmd;
+    uint8_t len;
+    union
+    {
+      uint32_t value;
+      uint8_t data[4];
+    };
+  } hid_report_cmd_t;
+
   esp_hid_scan_result_t *bt_scan_results;
   esp_hid_scan_result_t *ble_scan_results;
   static esp_hid_scan_result_t lastConnected;
@@ -172,19 +304,28 @@ private:
 
   esp_err_t start_ble_scan(uint32_t seconds);
   esp_err_t start_bt_scan(uint32_t seconds);
-  esp_err_t esp_hid_scan(uint32_t seconds, size_t *num_results, esp_hid_scan_result_t **results);
+  esp_err_t esp_hid_scan(uint32_t seconds, size_t *num_results, esp_hid_scan_result_t **results, bool enable_bt_classic);
 
   inline void set_battery_level(uint8_t level) { battery_level = level; }
 
   void push_key(uint8_t *keys, uint8_t size);
+  void push_key_CCONTROL(uint16_t *keys, uint8_t size);
+  void mouse_handle(uint8_t *report_data, std::pair<esp_hidh_dev_t *, uint16_t> *key_pair);
 
   QueueHandle_t event_queue;
+  QueueHandle_t event_queue_CCONTROL; // queue for long 16-bit CCONTROL Usage Codes
+  QueueHandle_t event_queue_MOUSE;    // queue for mouse control
   int8_t battery_level;
   bool key_avail[MAX_KEY_COUNT];
   char last_ch;
   TickType_t repeat_period;
   pid_handler *pairing_handler;
   bool caps_lock;
+
+  static esp_err_t hid_report_parse_multimedia_keys(const uint8_t *hid_rm, size_t hid_rm_len, esp_hidh_dev_t *device);
+  static int parse_cmd(const uint8_t *data, size_t len, size_t index, hid_report_cmd_t **out);
+  static int handle_cmd(hid_report_cmd_t *cmd, esp_hidh_dev_t *device);
+  static int handle_report(hid_report_params_t *report, esp_hidh_dev_t *device);
 
 public:
   BTKeyboard() : bt_scan_results(nullptr),
@@ -198,12 +339,23 @@ public:
 
   bool setup(pid_handler *handler = nullptr);
   bool devices_scan(int seconds_wait_time = 5);
+  bool devices_scan_ble_daemon(int seconds_wait_time = 5);
 
   inline uint8_t get_battery_level() { return battery_level; }
 
   inline bool wait_for_low_event(KeyInfo &inf, TickType_t duration = portMAX_DELAY)
   {
     return xQueueReceive(event_queue, &inf, duration);
+  }
+
+  inline bool wait_for_low_event_CCONTROL(KeyInfo_CCONTROL &inf, TickType_t duration = portMAX_DELAY)
+  {
+    return xQueueReceive(event_queue_CCONTROL, &inf, duration);
+  }
+
+  inline bool wait_for_low_event_MOUSE(Mouse_Control &inf, TickType_t duration = portMAX_DELAY)
+  {
+    return xQueueReceive(event_queue_MOUSE, &inf, duration);
   }
 
   char wait_for_ascii_char(bool forever = true);
