@@ -3,6 +3,9 @@
 #define HIGH 0x1
 #define LOW 0x0
 
+// Unomment following line to enable debug messages on the PS2DEV module
+//#define _ESP32_PS2DEV_DEBUG_
+
 namespace esp32_ps2dev
 {
 
@@ -307,18 +310,42 @@ namespace esp32_ps2dev
   int PS2dev::send_packet(PS2Packet *packet) { return (xQueueSend(_queue_packet, packet, 0) == pdTRUE) ? 0 : -1; }
 
   PS2Mouse::PS2Mouse(int clk, int data) : PS2dev(clk, data) {}
-  void PS2Mouse::begin()
+  void PS2Mouse::begin(bool restore_internal_state = 1)
   {
     PS2dev::begin();
 
-    xSemaphoreTake(_mutex_bus, portMAX_DELAY);
-    delayMicroseconds(BYTE_INTERVAL_MICROS);
-    while (write(0xAA) != 0)
+    auto ret = nvs_flash_init();
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "PS2Mouse::begin: nvs_flash_init failed");
+    }
+    const auto nvs_ns = std::string("ps2dev") + std::to_string(_ps2clk) + std::to_string(_ps2data);
+    ret = nvs_open(nvs_ns.c_str(), NVS_READWRITE, &_nvs_handle);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "PS2Mouse::begin: nvs_open failed");
+    }
+
+    if (!restore_internal_state)
+    {
+      xSemaphoreTake(_mutex_bus, portMAX_DELAY);
       delay(200);
-    delayMicroseconds(BYTE_INTERVAL_MICROS);
-    while (write(0x00) != 0)
-      delay(1);
-    xSemaphoreGive(_mutex_bus);
+      write(0xAA);
+      delayMicroseconds(BYTE_INTERVAL_MICROS);
+      write(0x00);
+      xSemaphoreGive(_mutex_bus);
+    }
+    else if (ret == ESP_OK)
+    {
+      _load_internal_state_from_nvs();
+      ESP_LOGI(TAG, "Internal state for mouse loaded from NVS");
+      xSemaphoreTake(_mutex_bus, portMAX_DELAY);
+      delay(200);
+      write(0xAA);
+      delayMicroseconds(BYTE_INTERVAL_MICROS);
+      write(0x00);
+      xSemaphoreGive(_mutex_bus);
+    }
 
     xTaskCreate(_taskfn_poll_mouse_count, "PS2Mouse", 4096, this, _config_task_priority - 1, &_task_poll_mouse_count);
   }
@@ -331,18 +358,19 @@ namespace esp32_ps2dev
       {
       case Command::SET_WRAP_MODE: // set wrap mode
 #if defined(_ESP32_PS2DEV_DEBUG_)
-        _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: (WRAP_MODE) Set wrap mode command received");
+        printf("PS2Mouse::reply_to_host: (WRAP_MODE) Set wrap mode command received");
 #endif
         ack();
         reset_counter();
         break;
       case Command::RESET_WRAP_MODE: // reset wrap mode
 #if defined(_ESP32_PS2DEV_DEBUG_)
-        _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: (WRAP_MODE) Reset wrap mode command received");
+        printf("PS2Mouse::reply_to_host: (WRAP_MODE) Reset wrap mode command received");
 #endif
         ack();
         reset_counter();
         _mode = _last_mode;
+        _save_internal_state_to_nvs();
         break;
       default:
         write(host_cmd);
@@ -354,12 +382,13 @@ namespace esp32_ps2dev
     {
     case Command::RESET: // reset
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Reset command received");
+      printf("PS2Mouse::reply_to_host: Reset command received");
 #endif
       ack();
       // the while loop lets us wait for the host to be ready
       while (write(0xAA) != 0)
         delay(1);
+      delayMicroseconds(BYTE_INTERVAL_MICROS);
       while (write(0x00) != 0)
         delay(1);
       _has_wheel = false;
@@ -369,17 +398,18 @@ namespace esp32_ps2dev
       _scale = Scale::ONE_ONE;
       _data_reporting_enabled = false;
       _mode = Mode::STREAM_MODE;
+      _save_internal_state_to_nvs();
       reset_counter();
       break;
     case Command::RESEND: // resend
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Resend command received");
+      printf("PS2Mouse::reply_to_host: Resend command received");
 #endif
       ack();
       break;
     case Command::SET_DEFAULTS: // set defaults
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Set defaults command received");
+      printf("PS2Mouse::reply_to_host: Set defaults command received");
 #endif
       // enter stream mode
       ack();
@@ -388,22 +418,25 @@ namespace esp32_ps2dev
       _scale = Scale::ONE_ONE;
       _data_reporting_enabled = false;
       _mode = Mode::STREAM_MODE;
+      _save_internal_state_to_nvs();
       reset_counter();
       break;
     case Command::DISABLE_DATA_REPORTING: // disable data reporting
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Disable data reporting command received");
+      printf("PS2Mouse::reply_to_host: Disable data reporting command received");
 #endif
       ack();
       _data_reporting_enabled = false;
+      _save_internal_state_to_nvs();
       reset_counter();
       break;
     case Command::ENABLE_DATA_REPORTING: // enable data reporting
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Enable data reporting command received");
+      printf("PS2Mouse::reply_to_host: Enable data reporting command received");
 #endif
       ack();
       _data_reporting_enabled = true;
+      _save_internal_state_to_nvs();
       reset_counter();
       break;
     case Command::SET_SAMPLE_RATE: // set sample rate
@@ -424,8 +457,8 @@ namespace esp32_ps2dev
           _last_sample_rate[1] = _last_sample_rate[2];
           _last_sample_rate[2] = val;
 #if defined(_ESP32_PS2DEV_DEBUG_)
-          _ESP32_PS2DEV_DEBUG_.print("Set sample rate command received: ");
-          _ESP32_PS2DEV_DEBUG_.println(val);
+          printf("Set sample rate command received: %x", val);
+          //_ESP32_PS2DEV_DEBUG_.println(val);
 #endif
           ack();
           break;
@@ -433,81 +466,94 @@ namespace esp32_ps2dev
         default:
           break;
         }
+        _save_internal_state_to_nvs();
         // _min_report_interval_us = 1000000 / sample_rate;
         reset_counter();
       }
       break;
     case Command::GET_DEVICE_ID: // get device id
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Get device id command received");
+      printf("PS2Mouse::reply_to_host: Get device id command received");
 #endif
       ack();
       if (_last_sample_rate[0] == 200 && _last_sample_rate[1] == 100 && _last_sample_rate[2] == 80)
       {
         write(0x03); // Intellimouse with wheel
 #if defined(_ESP32_PS2DEV_DEBUG_)
-        _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Act as Intellimouse with wheel.");
+        printf("PS2Mouse::reply_to_host: Act as Intellimouse with wheel.");
 #endif
         _has_wheel = true;
+        _save_internal_state_to_nvs();
       }
       else if (_last_sample_rate[0] == 200 && _last_sample_rate[1] == 200 && _last_sample_rate[2] == 80 && _has_wheel == true)
       {
         write(0x04); // Intellimouse with 4th and 5th buttons
 #if defined(_ESP32_PS2DEV_DEBUG_)
-        _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Act as Intellimouse with 4th and 5th buttons.");
+        printf("PS2Mouse::reply_to_host: Act as Intellimouse with 4th and 5th buttons.");
 #endif
         _has_4th_and_5th_buttons = true;
+        _save_internal_state_to_nvs();
       }
       else
       {
         write(0x00); // Standard PS/2 mouse
 #if defined(_ESP32_PS2DEV_DEBUG_)
-        _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Act as standard PS/2 mouse.");
+        printf("PS2Mouse::reply_to_host: Act as standard PS/2 mouse.");
 #endif
         _has_wheel = false;
         _has_4th_and_5th_buttons = false;
+        _save_internal_state_to_nvs();
       }
       reset_counter();
       break;
     case Command::SET_REMOTE_MODE: // set remote mode
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Set remote mode command received");
+      printf("PS2Mouse::reply_to_host: Set remote mode command received");
 #endif
-      ack();
+      // ack();
+      delayMicroseconds(BYTE_INTERVAL_MICROS);
+      while (write(0xFA) != 0)
+        delay(1);
+      delayMicroseconds(BYTE_INTERVAL_MICROS);
       reset_counter();
       _mode = Mode::REMOTE_MODE;
+      _save_internal_state_to_nvs();
       break;
     case Command::SET_WRAP_MODE: // set wrap mode
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Set wrap mode command received");
+      printf("PS2Mouse::reply_to_host: Set wrap mode command received");
 #endif
       ack();
       reset_counter();
       _last_mode = _mode;
       _mode = Mode::WRAP_MODE;
+      _save_internal_state_to_nvs();
       break;
     case Command::RESET_WRAP_MODE: // reset wrap mode
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Reset wrap mode command received");
+      printf("PS2Mouse::reply_to_host: Reset wrap mode command received");
 #endif
       ack();
       reset_counter();
       break;
     case Command::READ_DATA: // read data
+#if defined(_ESP32_PS2DEV_DEBUG_)
+                             // printf("PS2Mouse::reply_to_host: Read data command received"); //////////////////////////////////////////////////////////////
+#endif
       ack();
       _report();
       reset_counter();
       break;
     case Command::SET_STREAM_MODE: // set stream mode
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Set stream mode command received");
+      printf("PS2Mouse::reply_to_host: Set stream mode command received");
 #endif
       ack();
       reset_counter();
       break;
     case Command::STATUS_REQUEST: // status request
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Status request command received");
+      printf("PS2Mouse::reply_to_host: Status request command received");
 #endif
       ack();
       _send_status();
@@ -518,31 +564,37 @@ namespace esp32_ps2dev
       {
         _resolution = (ResolutionCode)val;
 #if defined(_ESP32_PS2DEV_DEBUG_)
-        _ESP32_PS2DEV_DEBUG_.print("PS2Mouse::reply_to_host: Set resolution command received: ");
-        _ESP32_PS2DEV_DEBUG_.println(val, HEX);
+        printf("PS2Mouse::reply_to_host: Set resolution command received: %x", val);
+        //_ESP32_PS2DEV_DEBUG_.println(val, HEX);
 #endif
         ack();
+        _save_internal_state_to_nvs();
         reset_counter();
       }
       break;
     case Command::SET_SCALING_2_1: // set scaling 2:1
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Set scaling 2:1 command received");
+      printf("PS2Mouse::reply_to_host: Set scaling 2:1 command received");
 #endif
       ack();
       _scale = Scale::TWO_ONE;
+      _save_internal_state_to_nvs();
       break;
     case Command::SET_SCALING_1_1: // set scaling 1:1
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Mouse::reply_to_host: Set scaling 1:1 command received");
+      printf("PS2Mouse::reply_to_host: Set scaling 1:1 command received");
 #endif
       ack();
       _scale = Scale::ONE_ONE;
+      _save_internal_state_to_nvs();
       break;
     default:
+      delayMicroseconds(BYTE_INTERVAL_MICROS);
+      while ((write(0xFE) != 0))
+        delay(1);
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.print("PS2Mouse::reply_to_host: Unknown command received: ");
-      _ESP32_PS2DEV_DEBUG_.println(host_cmd, HEX);
+      printf("PS2Mouse::reply_to_host: Unknown command receivedASD: %x", host_cmd);
+      //_ESP32_PS2DEV_DEBUG_.println(host_cmd, HEX);
 #endif
       break;
     }
@@ -563,8 +615,8 @@ namespace esp32_ps2dev
   void PS2Mouse::move(int16_t x, int16_t y, int8_t wheel)
   {
     _count_x += x;
-    _count_y += y;
-    _count_z += wheel;
+    _count_y -= y; // We need to decrement, because USB HID inverts the vertical axis
+    _count_z -= wheel;
     xTaskNotifyGive(_task_poll_mouse_count);
   }
   void PS2Mouse::press(Button button)
@@ -736,7 +788,7 @@ namespace esp32_ps2dev
     {
     case Command::RESET: // reset
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Keyboard::reply_to_host: Reset command received");
+      printf("PS2Keyboard::reply_to_host: Reset command received");
 #endif // _ESP32_PS2DEV_DEBUG_
        // the while loop lets us wait for the host to be ready
       _data_reporting_enabled = false;
@@ -747,34 +799,34 @@ namespace esp32_ps2dev
       break;
     case Command::RESEND: // resend
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Keyboard::reply_to_host: Resend command received");
+      printf("PS2Keyboard::reply_to_host: Resend command received");
 #endif // _ESP32_PS2DEV_DEBUG_
       ack();
       break;
     case Command::SET_DEFAULTS: // set defaults
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Keyboard::reply_to_host: Set defaults command received");
+      printf("PS2Keyboard::reply_to_host: Set defaults command received");
 #endif // _ESP32_PS2DEV_DEBUG_
        // enter stream mode
       ack();
       break;
     case Command::DISABLE_DATA_REPORTING: // disable data reporting
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Keyboard::reply_to_host: Disable data reporting command received");
+      printf("PS2Keyboard::reply_to_host: Disable data reporting command received");
 #endif // _ESP32_PS2DEV_DEBUG_
       _data_reporting_enabled = false;
       ack();
       break;
     case Command::ENABLE_DATA_REPORTING: // enable data reporting
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Keyboard::reply_to_host: Enable data reporting command received");
+      printf("PS2Keyboard::reply_to_host: Enable data reporting command received");
 #endif // _ESP32_PS2DEV_DEBUG_
       _data_reporting_enabled = true;
       ack();
       break;
     case Command::SET_TYPEMATIC_RATE: // set typematic rate
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Keyboard::reply_to_host: Set typematic rate command received");
+      printf("PS2Keyboard::reply_to_host: Set typematic rate command received");
 #endif // _ESP32_PS2DEV_DEBUG_
       ack();
       if (!read(&val))
@@ -782,7 +834,7 @@ namespace esp32_ps2dev
       break;
     case Command::GET_DEVICE_ID: // get device id
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Keyboard::reply_to_host: Get device id command received");
+      printf("PS2Keyboard::reply_to_host: Get device id command received");
 #endif // _ESP32_PS2DEV_DEBUG_
       ack();
       while (write(0xAB) != 0)
@@ -792,7 +844,7 @@ namespace esp32_ps2dev
       break;
     case Command::SET_SCAN_CODE_SET: // set scan code set
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Keyboard::reply_to_host: Set scan code set command received");
+      printf("PS2Keyboard::reply_to_host: Set scan code set command received");
 #endif // _ESP32_PS2DEV_DEBUG_
       ack();
       if (!read(&val))
@@ -800,7 +852,7 @@ namespace esp32_ps2dev
       break;
     case Command::ECHO: // echo
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Keyboard::reply_to_host: Echo command received");
+      printf("PS2Keyboard::reply_to_host: Echo command received");
 #endif // _ESP32_PS2DEV_DEBUG_
       delayMicroseconds(BYTE_INTERVAL_MICROS);
       write(0xEE);
@@ -808,7 +860,7 @@ namespace esp32_ps2dev
       break;
     case Command::SET_RESET_LEDS: // set/reset LEDs
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.println("PS2Keyboard::reply_to_host: Set/reset LEDs command received");
+      printf("PS2Keyboard::reply_to_host: Set/reset LEDs command received");
 #endif // _ESP32_PS2DEV_DEBUG_
       delayMicroseconds(BYTE_INTERVAL_MICROS);
       while (write(0xFA) != 0)
@@ -829,8 +881,8 @@ namespace esp32_ps2dev
     default:
       ack();
 #if defined(_ESP32_PS2DEV_DEBUG_)
-      _ESP32_PS2DEV_DEBUG_.print("PS2Keyboard::reply_to_host: Unknown command received: ");
-      _ESP32_PS2DEV_DEBUG_.println(host_cmd, HEX);
+      printf("PS2Keyboard::reply_to_host: Unknown command received: %x", host_cmd);
+      //_ESP32_PS2DEV_DEBUG_.println(host_cmd, HEX);
 #endif // _ESP32_PS2DEV_DEBUG_
       break;
     }
@@ -1291,6 +1343,74 @@ namespace esp32_ps2dev
     vTaskDelete(NULL);
   }
 
+  void PS2Mouse::_save_internal_state_to_nvs()
+  {
+    auto ret = nvs_set_u8(_nvs_handle, "hasWheel", _has_wheel);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "PS2Mouse::_save_internal_state_to_nvs: nvs_set_u8 failed to save hasWheel.");
+    }
+    ret = nvs_set_u8(_nvs_handle, "has4and5Btn", _has_4th_and_5th_buttons);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "PS2Mouse::_save_internal_state_to_nvs: nvs_set_u8 failed to save has4and5Btn.");
+    }
+    ret = nvs_set_u8(_nvs_handle, "dataRepEn", _data_reporting_enabled);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "PS2Mouse::_save_internal_state_to_nvs: nvs_set_u8 failed to save dataRepEn.");
+    }
+    ret = nvs_set_u8(_nvs_handle, "resolution", (uint8_t)_resolution);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "PS2Mouse::_save_internal_state_to_nvs: nvs_set_u8 failed to save resolution.");
+    }
+    ret = nvs_set_u8(_nvs_handle, "scale", (uint8_t)_scale);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "PS2Mouse::_save_internal_state_to_nvs: nvs_set_u8 failed to save scale.");
+    }
+    ret = nvs_set_u8(_nvs_handle, "mode", (uint8_t)_mode);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "PS2Mouse::_save_internal_state_to_nvs: nvs_set_u8 failed to save mode.");
+    }
+  }
+
+  void PS2Mouse::_load_internal_state_from_nvs()
+  {
+    auto ret = nvs_get_u8(_nvs_handle, "hasWheel", (uint8_t *)&_has_wheel);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "PS2Mouse::_load_internal_state_from_nvs: nvs_get_u8 failed to load hasWheel.");
+    }
+    nvs_get_u8(_nvs_handle, "has4and5Btn", (uint8_t *)&_has_4th_and_5th_buttons);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "PS2Mouse::_load_internal_state_from_nvs: nvs_get_u8 failed to load has4and5Btn.");
+    }
+    nvs_get_u8(_nvs_handle, "dataRepEn", (uint8_t *)&_data_reporting_enabled);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "PS2Mouse::_load_internal_state_from_nvs: nvs_get_u8 failed to load dataRepEn.");
+    }
+    nvs_get_u8(_nvs_handle, "resolution", (uint8_t *)&_resolution);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "PS2Mouse::_load_internal_state_from_nvs: nvs_get_u8 failed to load resolution.");
+    }
+    nvs_get_u8(_nvs_handle, "scale", (uint8_t *)&_scale);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "PS2Mouse::_load_internal_state_from_nvs: nvs_get_u8 failed to load scale.");
+    }
+    nvs_get_u8(_nvs_handle, "mode", (uint8_t *)&_mode);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "PS2Mouse::_load_internal_state_from_nvs: nvs_get_u8 failed to load mode.");
+    }
+  }
+
   void PS2Keyboard::keyHid_send(uint8_t btkey, bool keyDown)
   {
     scancodes::Key key;
@@ -1625,6 +1745,59 @@ namespace esp32_ps2dev
       break;
     case 0xE7:
       key = scancodes::Key::K_RSUPER;
+      break;
+
+    default:
+      return;
+      break;
+    }
+
+    if (keyDown)
+      keydown(key);
+    else
+      keyup(key);
+  }
+
+  void PS2Keyboard::keyHid_send_CCONTROL(uint16_t btkey, bool keyDown)
+  {
+    scancodes::Key key;
+    switch (btkey)
+    {
+    case 0xCD:
+      key = scancodes::Key::K_MEDIA_PLAY_PAUSE;
+      break;
+    case 0xE9:
+      key = scancodes::Key::K_MEDIA_VOLUME_UP;
+      break;
+    case 0xEA:
+      key = scancodes::Key::K_MEDIA_VOLUME_DOWN;
+      break;
+    case 0xB6:
+      key = scancodes::Key::K_MEDIA_PREV_TRACK;
+      break;
+    case 0xB5:
+      key = scancodes::Key::K_MEDIA_NEXT_TRACK;
+      break;
+    case 0x183:
+      key = scancodes::Key::K_MEDIA_MEDIA_SELECT;
+      break;
+    case 0x18A:
+      key = scancodes::Key::K_MEDIA_EMAIL;
+      break;
+    case 0xE2:
+      key = scancodes::Key::K_MEDIA_MUTE;
+      break;
+    case 0x221:
+      key = scancodes::Key::K_MEDIA_WWW_SEARCH;
+      break;
+    case 0x223:
+      key = scancodes::Key::K_HOME;
+      break;
+    case 0x196:
+      key = scancodes::Key::K_MEDIA_WWW_HOME;
+      break;
+    case 0x224:
+      key = scancodes::Key::K_MEDIA_WWW_BACK;
       break;
 
     default:
