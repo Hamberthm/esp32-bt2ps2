@@ -1,6 +1,6 @@
 24/8/24: Mouse and Multimedia Key support is out for v0.6! Check notes on release
 
-Remember to connect the PS2 port Ground to the board, it won't work if you leave it floating.
+Tested Bluetooth Keyboards and Mice (Please add your own!): https://1drv.ms/x/s!AlKre4_rNmpJiYpl1v4KcbK1Pm77zA?e=0I6QRB
 
 FreeRTOS ticking rate of 1000hz and other configs are critical. Be sure to use the default SDKconfig.defaults file included!
 
