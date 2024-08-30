@@ -475,6 +475,15 @@ bool BTKeyboard::setup(pid_handler *handler)
 
   last_ch = 0;
   battery_level = -1;
+
+  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
+  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
+  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_SCAN, ESP_PWR_LVL_P9);
+
+  int pwrAdv = esp_ble_tx_power_get(ESP_BLE_PWR_TYPE_ADV);
+  int pwrScan = esp_ble_tx_power_get(ESP_BLE_PWR_TYPE_SCAN);
+  int pwrDef = esp_ble_tx_power_get(ESP_BLE_PWR_TYPE_DEFAULT);
+  ESP_LOGI("BT_keyboard setup:", "Power Settings: (ADV,SCAN,DEFAULT) %u, %u, %u", pwrAdv, pwrScan, pwrDef); // all should show index7, aka +9dbm
   return true;
 }
 
@@ -688,7 +697,7 @@ void BTKeyboard::handle_ble_device_result(esp_ble_gap_cb_param_t *param)
     if ((esp_ble_get_bond_device_list(&numBonded, dev_list)) != ESP_OK)
     { // populate list
       ESP_LOGE(TAG, "esp_ble_get_bond_device_list failed");
-      numBonded = 0; //this prevents the code below from trying to read the list
+      numBonded = 0; // this prevents the code below from trying to read the list
     }
   }
 
@@ -1079,6 +1088,10 @@ bool BTKeyboard::devices_scan(int seconds_wait_time)
 
     return false;
   }
+
+  esp_hid_scan_results_free(results);
+  free(dev_list);
+
   return false;
 }
 
@@ -1146,6 +1159,9 @@ bool BTKeyboard::devices_scan_ble_daemon(int seconds_wait_time)
     free(dev_list);
     return true; // WARNING: devices_scan retourning true doesn't mean device connected!! check isConnected for that
   }
+
+  esp_hid_scan_results_free(results);
+  free(dev_list);
   return false;
 }
 
@@ -1196,6 +1212,9 @@ void BTKeyboard::hidh_callback(void *handler_args, esp_event_base_t base, int32_
         {
           ESP_LOGE(TAG, " Failed getting report maps for the device.");
         }
+
+        ESP_LOG_BUFFER_HEX_LEVEL("RAW REPORT MAP: ", report_maps[0].data, report_maps[0].len, ESP_LOG_DEBUG);
+
         const uint8_t *bda = esp_hidh_dev_bda_get(param->open.dev);
 
         ESP_LOGV(TAG, ESP_BD_ADDR_STR " OPEN: %s", ESP_BD_ADDR_HEX(bda), esp_hidh_dev_name_get(param->open.dev));
@@ -1333,46 +1352,12 @@ void BTKeyboard::mouse_handle(uint8_t *report_data, std::pair<esp_hidh_dev_t *, 
 {
   Mouse_Control mouse;
 
-  if ((mouse_reports[*key_pair].mouse_x_byte_lenght <= 4) && (mouse_reports[*key_pair].mouse_w_byte_lenght <= 4))
-  {
-    memcpy(&(mouse.mouse_x_long), (report_data + mouse_reports[*key_pair].mouse_x_byte_index), mouse_reports[*key_pair].mouse_x_byte_lenght);
-    memcpy(&(mouse.mouse_y_long), (report_data + mouse_reports[*key_pair].mouse_y_byte_index), mouse_reports[*key_pair].mouse_y_byte_lenght);
-    memcpy(&(mouse.mouse_w_long), (report_data + mouse_reports[*key_pair].mouse_w_byte_index), mouse_reports[*key_pair].mouse_w_byte_lenght);
+  mouse.mouse_x = getBits(report_data, mouse_reports[*key_pair].mouse_x_bit_index, mouse_reports[*key_pair].mouse_x_bit_lenght);
+  mouse.mouse_y = getBits(report_data, mouse_reports[*key_pair].mouse_y_bit_index, mouse_reports[*key_pair].mouse_y_bit_lenght);
+  mouse.mouse_w = (int8_t)getBits(report_data, mouse_reports[*key_pair].mouse_w_bit_index, mouse_reports[*key_pair].mouse_w_bit_lenght);
+  mouse.mouse_buttons = (uint8_t)getBits(report_data, mouse_reports[*key_pair].mouse_buttons_bit_index, mouse_reports[*key_pair].mouse_buttons_amount); // only a single byte for mouse buttons is supported (3 mouse buttons will be used later only)
 
-    if (mouse_reports[*key_pair].mouse_x_byte_lenght != 2) // check if we need to typecast (we use 16-bit signed values to pass)
-    {
-      if (mouse_reports[*key_pair].mouse_x_byte_lenght == 1)
-      {
-        mouse.mouse_x = (int16_t)mouse.mouse_x_short;
-        mouse.mouse_y = (int16_t)mouse.mouse_y_short;
-      }
-      else if (mouse_reports[*key_pair].mouse_x_byte_lenght == 4)
-      {
-        mouse.mouse_x = (int16_t)mouse.mouse_x_long;
-        mouse.mouse_y = (int16_t)mouse.mouse_y_long;
-      }
-    }
-
-    if (mouse_reports[*key_pair].mouse_w_byte_lenght != 1) // check if we need to typecast (we use 8-bit signed values to pass)
-    {
-      if (mouse_reports[*key_pair].mouse_w_byte_lenght == 2)
-      {
-        mouse.mouse_w_short = (int8_t)mouse.mouse_w;
-      }
-      else if (mouse_reports[*key_pair].mouse_w_byte_lenght == 4)
-      {
-        mouse.mouse_w_short = (int8_t)mouse.mouse_w_long;
-      }
-    }
-  }
-  else
-  {
-    ESP_LOGE(TAG, "Mouse is not supported. Byte lenght for X: %u, Y: %u, W: %u", mouse_reports[*key_pair].mouse_x_byte_lenght, mouse_reports[*key_pair].mouse_y_byte_lenght, mouse_reports[*key_pair].mouse_w_byte_lenght);
-  }
-
-  mouse.mouse_buttons = *(report_data + (mouse_reports[*key_pair].mouse_buttons_byte_index)); // only a single byte for mouse buttons is supported (3 mouse buttons will be used later only)
-
-  ESP_LOGD(TAG, "Mouse passed to MAIN: B: %u X: %d Y: %d W: %d", mouse.mouse_buttons, mouse.mouse_x, mouse.mouse_y, mouse.mouse_w_short);
+  ESP_LOGD(TAG, "Mouse passed to MAIN: B: %u X: %d Y: %d W: %d", mouse.mouse_buttons, mouse.mouse_x, mouse.mouse_y, mouse.mouse_w);
   xQueueSend(event_queue_MOUSE, &mouse, 0);
 }
 
@@ -1813,27 +1798,80 @@ int BTKeyboard::handle_report(hid_report_params_t *report, esp_hidh_dev_t *devic
   {
     mouse_reports[key].report_id = report->report_id;
     mouse_reports[key].input_len = report->input_len;
-    mouse_reports[key].mouse_x_byte_index = report->mouse_x_bit_index / 8;
-    mouse_reports[key].mouse_y_byte_index = report->mouse_y_bit_index / 8;
-    mouse_reports[key].mouse_w_byte_index = report->mouse_w_bit_index / 8;
-    mouse_reports[key].mouse_x_byte_lenght = report->mouse_x_lenght / 8;
-    mouse_reports[key].mouse_y_byte_lenght = report->mouse_y_lenght / 8;
-    mouse_reports[key].mouse_w_byte_lenght = report->mouse_w_lenght / 8;
-    mouse_reports[key].mouse_buttons_byte_index = report->mouse_buttons_bit_index / 8;
+    mouse_reports[key].mouse_x_bit_index = report->mouse_x_bit_index;
+    mouse_reports[key].mouse_y_bit_index = report->mouse_y_bit_index;
+    mouse_reports[key].mouse_w_bit_index = report->mouse_w_bit_index;
+    mouse_reports[key].mouse_x_bit_lenght = report->mouse_x_lenght;
+    mouse_reports[key].mouse_y_bit_lenght = report->mouse_y_lenght;
+    mouse_reports[key].mouse_w_bit_lenght = report->mouse_w_lenght;
+    mouse_reports[key].mouse_buttons_bit_index = report->mouse_buttons_bit_index;
     mouse_reports[key].mouse_buttons_amount = report->mouse_buttons_amount;
 
     ESP_LOGD("bt_Keyboard handle_report: ", "Amount of MOUSE reports: %u X: %u Y: %u W: %u Xl: %u Yl: %u Wl: %u B: %u Bl: %u", mouse_reports.size(),
-             mouse_reports[key].mouse_x_byte_index,
-             mouse_reports[key].mouse_y_byte_index,
-             mouse_reports[key].mouse_w_byte_index,
-             mouse_reports[key].mouse_x_byte_lenght,
-             mouse_reports[key].mouse_y_byte_lenght,
-             mouse_reports[key].mouse_w_byte_lenght,
-             mouse_reports[key].mouse_buttons_byte_index,
+             mouse_reports[key].mouse_x_bit_index,
+             mouse_reports[key].mouse_y_bit_index,
+             mouse_reports[key].mouse_w_bit_index,
+             mouse_reports[key].mouse_x_bit_lenght,
+             mouse_reports[key].mouse_y_bit_lenght,
+             mouse_reports[key].mouse_w_bit_lenght,
+             mouse_reports[key].mouse_buttons_bit_index,
              mouse_reports[key].mouse_buttons_amount);
   }
 
   temp_usages_array.clear();
   s_usages_count = 0;
   return 0;
+}
+
+int16_t BTKeyboard::getBits(const void *Data, uint16_t StartBit, uint16_t NumBits)
+{
+
+  // get a pointer to the starting byte...
+  const uint8_t *pData = &(static_cast<const uint8_t *>(Data)[StartBit / 8]);
+
+  uint16_t data;
+  uint16_t signBit;
+  uint16_t mask;
+  uint16_t extendMask;
+  uint16_t startBit;
+  uint16_t lastByte;
+
+  startBit = StartBit & 7;
+  lastByte = (NumBits - 1) / 8;
+
+  /* Pick up the data bytes backwards */
+  data = 0;
+  do
+  {
+    data <<= 8;
+    data |= *(pData + lastByte);
+  } while (lastByte--);
+
+  /* Shift to the right to byte align the least significant bit */
+  if (startBit > 0)
+  {
+    data >>= startBit;
+  }
+
+  /* Done if 16 bits long */
+  if (NumBits < 16)
+  {
+
+    /* Mask off the other bits */
+    mask = 1 << NumBits;
+    mask--;
+    data &= mask;
+
+    /* Sign extend the report item */
+    signBit = 1;
+    if (NumBits > 1)
+      signBit <<= (NumBits - 1);
+    extendMask = (signBit << 1) - 1;
+    if ((data & signBit) == 0)
+      data &= extendMask;
+    else
+      data |= ~extendMask;
+  }
+
+  return data;
 }
