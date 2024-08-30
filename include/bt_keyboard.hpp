@@ -88,24 +88,11 @@ public:
 
   struct Mouse_Control
   {
-    union
-    {
-      int32_t mouse_x_long = 0;
-      int16_t mouse_x;
-      int8_t mouse_x_short;
-    };
-    union
-    {
-      int32_t mouse_y_long = 0;
-      int16_t mouse_y;
-      int8_t mouse_y_short;
-    };
-    union
-    {
-      int32_t mouse_w_long = 0;
-      int16_t mouse_w;
-      int8_t mouse_w_short;
-    };
+    int16_t mouse_x = 0;
+
+    int16_t mouse_y = 0;
+
+    int8_t mouse_w = 0;
 
     uint8_t mouse_buttons = 0;
   };
@@ -215,13 +202,13 @@ private:
   {
     uint8_t report_id = 0;
     uint16_t input_len = 0;
-    uint16_t mouse_x_byte_index = 0;
-    uint16_t mouse_x_byte_lenght = 0;
-    uint16_t mouse_y_byte_index = 0;
-    uint16_t mouse_y_byte_lenght = 0;
-    uint16_t mouse_w_byte_index = 0;
-    uint16_t mouse_w_byte_lenght = 0;
-    uint16_t mouse_buttons_byte_index = 0;
+    uint16_t mouse_x_bit_index = 0;
+    uint16_t mouse_x_bit_lenght = 0;
+    uint16_t mouse_y_bit_index = 0;
+    uint16_t mouse_y_bit_lenght = 0;
+    uint16_t mouse_w_bit_index = 0;
+    uint16_t mouse_w_bit_lenght = 0;
+    uint16_t mouse_buttons_bit_index = 0;
     uint16_t mouse_buttons_amount = 0;
   } hid_report_mouse;
 
@@ -326,6 +313,7 @@ private:
   static int parse_cmd(const uint8_t *data, size_t len, size_t index, hid_report_cmd_t **out);
   static int handle_cmd(hid_report_cmd_t *cmd, esp_hidh_dev_t *device);
   static int handle_report(hid_report_params_t *report, esp_hidh_dev_t *device);
+  int16_t getBits(const void *Data, uint16_t StartBit, uint16_t NumBits);
 
 public:
   BTKeyboard() : bt_scan_results(nullptr),
