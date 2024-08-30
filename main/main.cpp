@@ -585,7 +585,7 @@ void mouse_task(void *arg)
     {
         if (bt_keyboard.wait_for_low_event_MOUSE(infoMouse)) // return immediately if queue empty
         {
-            mouse.move(infoMouse.mouse_x, infoMouse.mouse_y, infoMouse.mouse_w_short);
+            mouse.move(infoMouse.mouse_x, infoMouse.mouse_y, infoMouse.mouse_w);
 
             // KEY SECTION (always tested)
             if ((infoMouse.mouse_buttons) != (infoMouseBuf.mouse_buttons))
