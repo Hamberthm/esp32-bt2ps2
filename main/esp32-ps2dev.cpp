@@ -102,14 +102,14 @@ namespace esp32_ps2dev
     _config_task_core = task_core;
   }
 
-  void PS2dev::begin()
+  void PS2dev::begin(BaseType_t core = DEFAULT_TASK_CORE)
   {
     gohi(_ps2clk);
     gohi(_ps2data);
     _mutex_bus = xSemaphoreCreateMutex();
     _queue_packet = xQueueCreate(PACKET_QUEUE_LENGTH, sizeof(PS2Packet));
-    xTaskCreateUniversal(_taskfn_process_host_request, "process_host_request", 4096, this, _config_task_priority, &_task_process_host_request, _config_task_core);
-    xTaskCreateUniversal(_taskfn_send_packet, "send_packet", 4096, this, _config_task_priority - 1, &_task_send_packet, _config_task_core);
+    xTaskCreateUniversal(_taskfn_process_host_request, "process_host_request", 4096, this, _config_task_priority, &_task_process_host_request, core);
+    xTaskCreateUniversal(_taskfn_send_packet, "send_packet", 4096, this, _config_task_priority - 1, &_task_send_packet, core);
   }
 
   void PS2dev::gohi(int pin)
@@ -312,7 +312,7 @@ namespace esp32_ps2dev
   PS2Mouse::PS2Mouse(int clk, int data) : PS2dev(clk, data) {}
   void PS2Mouse::begin(bool restore_internal_state = 1)
   {
-    PS2dev::begin();
+    PS2dev::begin(DEFAULT_TASK_CORE_MOUSE);
 
     auto ret = nvs_flash_init();
     if (ret != ESP_OK)
@@ -347,7 +347,7 @@ namespace esp32_ps2dev
       xSemaphoreGive(_mutex_bus);
     }
 
-    xTaskCreate(_taskfn_poll_mouse_count, "PS2Mouse", 4096, this, _config_task_priority - 1, &_task_poll_mouse_count);
+    xTaskCreatePinnedToCore(_taskfn_poll_mouse_count, "PS2Mouse", 4096, this, _config_task_priority - 1, &_task_poll_mouse_count, DEFAULT_TASK_CORE_MOUSE);
   }
   int PS2Mouse::reply_to_host(uint8_t host_cmd)
   {
