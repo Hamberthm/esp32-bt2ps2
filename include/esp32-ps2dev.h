@@ -29,7 +29,9 @@ namespace esp32_ps2dev
   const uint32_t BYTE_INTERVAL_MICROS = 500; // in v0.4 was OK: 500, change if not working and you know what you're doing.
   const int PACKET_QUEUE_LENGTH = 20;
   const UBaseType_t DEFAULT_TASK_PRIORITY = 10;
-  const BaseType_t DEFAULT_TASK_CORE = APP_CPU_NUM;
+  //const BaseType_t DEFAULT_TASK_CORE = APP_CPU_NUM;
+  const BaseType_t DEFAULT_TASK_CORE = 0;
+  const BaseType_t DEFAULT_TASK_CORE_MOUSE = 1;
   // The device should check for "HOST_REQUEST_TO_SEND" at a interval not exceeding 10 milliseconds.
   const uint32_t INTERVAL_CHECKING_HOST_SEND_REQUEST_MILLIS = 9;
   const uint32_t MOUSE_CLICK_PRESSING_DURATION_MILLIS = 100;
@@ -54,7 +56,7 @@ namespace esp32_ps2dev
     };
 
     void config(UBaseType_t task_priority, BaseType_t task_core);
-    void begin();
+    void begin(BaseType_t core);
     int write(unsigned char data);
     int write_wait_idle(uint8_t data, uint64_t timeout_micros = 1500);
     int read(unsigned char *data, uint64_t timeout_ms = 0);
