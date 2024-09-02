@@ -1,4 +1,5 @@
 1/9/24: Serial Mouse support is out for v0.7! Check notes on release
+
 24/8/24: Mouse and Multimedia Key support is out for v0.6! Check notes on release
 
 Tested Bluetooth Keyboards and Mice (Please add your own!): https://1drv.ms/x/s!AlKre4_rNmpJiYpl1v4KcbK1Pm77zA?e=0I6QRB
