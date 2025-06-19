@@ -84,7 +84,7 @@ Project works as-is under Visual Studio Code (2024). You need to have the Espres
 
 5- Execute command "ESP-IDF: Configure ESP-IDF extension"
 
-6- Select Express, and under "Select ESP-IDF version" choose v5.3
+6- Select Express, and under "Select ESP-IDF version" choose v5.3.0 (As of 19/6/25 v5.3.3 or higher are NOT working!)
 
 7- After installation, select File > Open Folder and open the ESP32-BT2PS2 project folder
 
