@@ -21,7 +21,7 @@ YouTube demo: https://youtu.be/2PVjWfAAJFE
 
 Tested Bluetooth Keyboards and Mice (Please add your own!): https://1drv.ms/x/s!AlKre4_rNmpJiYpl1v4KcbK1Pm77zA?e=0I6QRB
 
-Working under latest ESP-IDF v5.3, compiled on Visual Studio Code. Multi-device support may not work on lower versions of the SDK.
+Working under latest ESP-IDF v5.3.0 (not v5.3.3 or higher), compiled on Visual Studio Code. Multi-device support may not work on lower versions of the SDK.
 
 **Developed and tested on the ESP32 DevKit rev 1 board, other variants may not work!**
 
@@ -72,7 +72,7 @@ Note: ESP32 is **unofficially** 5V tolerant, so you can directly connect PS/2 pi
 
 *Note there's a binary release available!
 
-Project works as-is under Visual Studio Code (2024). You need to have the Espressif IDF extension installed and the v5.3 of the ESP-IDF SDK. Workflow is as follows:
+Project works as-is under Visual Studio Code (2024). You need to have the Espressif IDF extension installed and the v5.3.0 of the ESP-IDF SDK. Workflow is as follows:
 
 1- Install Visual Studio Code
 
