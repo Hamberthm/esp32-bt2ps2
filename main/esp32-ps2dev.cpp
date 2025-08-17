@@ -1,4 +1,4 @@
-#include "..\include\esp32-ps2dev.h"
+#include "../include/esp32-ps2dev.h"
 #define NOP() asm volatile("nop")
 #define HIGH 0x1
 #define LOW 0x0

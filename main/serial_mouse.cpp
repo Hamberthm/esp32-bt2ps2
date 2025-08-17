@@ -1,8 +1,8 @@
 // This module contains code from the PS/2 to Serial mouse project by Necroware
 // Adapted and modified by Hambert - HamCode - 2024
 
-#include "..\include\serial_mouse.h"
-#include "..\include\esp32-ps2dev.h"
+#include "../include/serial_mouse.h"
+#include "../include/esp32-ps2dev.h"
 #define NOP() asm volatile("nop")
 
 static bool threeButtons = false;

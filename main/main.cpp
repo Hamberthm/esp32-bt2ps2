@@ -8,15 +8,15 @@ Dedicated to all who love me and all who I love.
 Never stop dreaming.
 */
 
-#include "..\include\globals.hpp"
+#include "../include/globals.hpp"
 #include "nvs_flash.h"
 #include "esp_system.h"
-#include "driver\gpio.h"
+#include "driver/gpio.h"
 #include <iostream>
 #include <cmath>
-#include "..\include\bt_keyboard.hpp" // Interface with a BT/BLE peripheral device (Keyboard & Mouse)
-#include "..\include\esp32-ps2dev.h"  // Emulate a PS/2 device
-#include "..\include\serial_mouse.h"  // Emulate a serial mouse
+#include "../include/bt_keyboard.hpp" // Interface with a BT/BLE peripheral device (Keyboard & Mouse)
+#include "../include/esp32-ps2dev.h"  // Emulate a PS/2 device
+#include "../include/serial_mouse.h"  // Emulate a serial mouse
 
 /////////////////////////////// USER ADJUSTABLE VARIABLES //////////////////////////////////////////////////
 

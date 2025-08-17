@@ -21,7 +21,7 @@
 // limitations under the License.
 
 #define __BT_KEYBOARD__ 1
-#include "..\include\bt_keyboard.hpp"
+#include "../include/bt_keyboard.hpp"
 
 #include <cstring>
 #include <algorithm>
