@@ -21,11 +21,12 @@
 // limitations under the License.
 
 #define __BT_KEYBOARD__ 1
-#include "..\include\bt_keyboard.hpp"
+#include "bt_keyboard.hpp"
 
 #include <cstring>
 #include <algorithm>
 #include <iterator>
+#include <iomanip>
 
 #define SCAN 1
 
@@ -40,8 +41,12 @@
 #define WAIT_BLE_CB() xSemaphoreTake(ble_hidh_cb_semaphore, portMAX_DELAY)
 #define SEND_BLE_CB() xSemaphoreGive(ble_hidh_cb_semaphore)
 
+#define LED_DEVICE_MAP_LOCK() xSemaphoreTake(led_device_map_semaphore, portMAX_DELAY)
+#define LED_DEVICE_MAP_UNLOCK() xSemaphoreGive(led_device_map_semaphore)
+
 SemaphoreHandle_t BTKeyboard::bt_hidh_cb_semaphore = nullptr;
 SemaphoreHandle_t BTKeyboard::ble_hidh_cb_semaphore = nullptr;
+SemaphoreHandle_t BTKeyboard::led_device_map_semaphore = nullptr;
 
 const char *BTKeyboard::gap_bt_prop_type_names[] = {"", "BDNAME", "COD", "RSSI", "EIR"};
 const char *BTKeyboard::ble_gap_evt_names[] = {"ADV_DATA_SET_COMPLETE", "SCAN_RSP_DATA_SET_COMPLETE", "SCAN_PARAM_SET_COMPLETE", "SCAN_RESULT", "ADV_DATA_RAW_SET_COMPLETE", "SCAN_RSP_DATA_RAW_SET_COMPLETE", "ADV_START_COMPLETE", "SCAN_START_COMPLETE", "AUTH_CMPL", "KEY", "SEC_REQ", "PASSKEY_NOTIF", "PASSKEY_REQ", "OOB_REQ", "LOCAL_IR", "LOCAL_ER", "NC_REQ", "ADV_STOP_COMPLETE", "SCAN_STOP_COMPLETE", "SET_STATIC_RAND_ADDR", "UPDATE_CONN_PARAMS", "SET_PKT_LENGTH_COMPLETE", "SET_LOCAL_PRIVACY_COMPLETE", "REMOVE_BOND_DEV_COMPLETE", "CLEAR_BOND_DEV_COMPLETE", "GET_BOND_DEV_COMPLETE", "READ_RSSI_COMPLETE", "UPDATE_WHITELIST_COMPLETE"};
@@ -65,6 +70,7 @@ BTKeyboard::esp_hid_scan_result_t BTKeyboard::lastConnected;
 
 std::map<std::pair<esp_hidh_dev_t *, uint16_t>, BTKeyboard::hid_report_multimedia_control> BTKeyboard::multimedia_reports;
 std::map<std::pair<esp_hidh_dev_t *, uint16_t>, BTKeyboard::hid_report_mouse> BTKeyboard::mouse_reports;
+std::map<std::string, BTKeyboard::led_device_info> BTKeyboard::led_device_map;
 BTKeyboard::s_parse_step_t BTKeyboard::s_parse_step;
 uint8_t BTKeyboard::s_collection_depth;
 BTKeyboard::hid_report_params_t BTKeyboard::s_report_params;
@@ -154,7 +160,7 @@ void BTKeyboard::print_uuid(esp_bt_uuid_t *uuid)
   }
   else if (uuid->len == ESP_UUID_LEN_32)
   {
-    GAP_DBG_PRINTF("UUID32: 0x%08x", uuid->uuid.uuid32);
+    GAP_DBG_PRINTF("UUID32: 0x%08lx", uuid->uuid.uuid32);
   }
   else if (uuid->len == ESP_UUID_LEN_128)
   {
@@ -325,9 +331,7 @@ bool BTKeyboard::setup(pid_handler *handler)
 
   s_parse_step = PARSE_WAIT_USAGE_PAGE;
   s_collection_depth = 0;
-  s_report_params = {
-      0,
-  };
+  s_report_params = s_report_params_empty;
   s_report_size = 0;
   s_report_count = 0;
   s_usages_count = 0;
@@ -365,6 +369,17 @@ bool BTKeyboard::setup(pid_handler *handler)
     ESP_LOGE(TAG, "xSemaphoreCreateMutex failed!");
     vSemaphoreDelete(bt_hidh_cb_semaphore);
     bt_hidh_cb_semaphore = nullptr;
+    return false;
+  }
+
+  led_device_map_semaphore = xSemaphoreCreateMutex();
+  if (led_device_map_semaphore == nullptr)
+  {
+    ESP_LOGE(TAG, "xSemaphoreCreateMutex failed!");
+    vSemaphoreDelete(bt_hidh_cb_semaphore);
+    vSemaphoreDelete(ble_hidh_cb_semaphore);
+    bt_hidh_cb_semaphore = nullptr;
+    ble_hidh_cb_semaphore = nullptr;
     return false;
   }
 
@@ -648,7 +663,7 @@ void BTKeyboard::handle_ble_device_result(esp_ble_gap_cb_param_t *param)
   char name[64] = "";
 
   uint8_t uuid_len = 0;
-  uint8_t *uuid_d = esp_ble_resolve_adv_data(param->scan_rst.ble_adv, ESP_BLE_AD_TYPE_16SRV_CMPL, &uuid_len);
+  uint8_t *uuid_d = esp_ble_resolve_adv_data_by_type(param->scan_rst.ble_adv, param->scan_rst.adv_data_len + param->scan_rst.scan_rsp_len, ESP_BLE_AD_TYPE_16SRV_CMPL, &uuid_len);
 
   if (uuid_d != nullptr && uuid_len)
   {
@@ -656,7 +671,7 @@ void BTKeyboard::handle_ble_device_result(esp_ble_gap_cb_param_t *param)
   }
 
   uint8_t appearance_len = 0;
-  uint8_t *appearance_d = esp_ble_resolve_adv_data(param->scan_rst.ble_adv, ESP_BLE_AD_TYPE_APPEARANCE, &appearance_len);
+  uint8_t *appearance_d = esp_ble_resolve_adv_data_by_type(param->scan_rst.ble_adv, param->scan_rst.adv_data_len + param->scan_rst.scan_rsp_len, ESP_BLE_AD_TYPE_APPEARANCE, &appearance_len);
 
   if (appearance_d != nullptr && appearance_len)
   {
@@ -664,11 +679,11 @@ void BTKeyboard::handle_ble_device_result(esp_ble_gap_cb_param_t *param)
   }
 
   uint8_t adv_name_len = 0;
-  uint8_t *adv_name = esp_ble_resolve_adv_data(param->scan_rst.ble_adv, ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
+  uint8_t *adv_name = esp_ble_resolve_adv_data_by_type(param->scan_rst.ble_adv, param->scan_rst.adv_data_len + param->scan_rst.scan_rsp_len, ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
 
   if (adv_name == nullptr)
   {
-    adv_name = esp_ble_resolve_adv_data(param->scan_rst.ble_adv, ESP_BLE_AD_TYPE_NAME_SHORT, &adv_name_len);
+    adv_name = esp_ble_resolve_adv_data_by_type(param->scan_rst.ble_adv, param->scan_rst.adv_data_len + param->scan_rst.scan_rsp_len,ESP_BLE_AD_TYPE_NAME_SHORT, &adv_name_len);
   }
 
   if (adv_name != nullptr && adv_name_len)
@@ -719,7 +734,7 @@ void BTKeyboard::handle_ble_device_result(esp_ble_gap_cb_param_t *param)
     }
   }
 
-  if (uuid == ESP_GATT_UUID_HID_SVC || isLastBonded == true)
+  if (uuid == ESP_GATT_UUID_HID_SVC || appearance == ESP_HID_APPEARANCE_MOUSE || appearance == ESP_HID_APPEARANCE_KEYBOARD || isLastBonded == true)
   {
     add_ble_scan_result(param->scan_rst.bda,
                         param->scan_rst.ble_addr_type,
@@ -1165,6 +1180,48 @@ bool BTKeyboard::devices_scan_ble_daemon(int seconds_wait_time)
   return false;
 }
 
+static std::string bda_to_string(const esp_bd_addr_t bda)
+{
+  std::ostringstream oss;
+  for (int i = 0; i < ESP_BD_ADDR_LEN; i++)
+  {
+    if (i)
+      oss << ":";
+    oss << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << (int)bda[i];
+  }
+
+  return oss.str();
+}
+
+bool BTKeyboard::find_output_report(esp_hidh_dev_t *dev, size_t &map_index, size_t &report_id)
+{
+  size_t num_reports;
+  esp_hid_report_item_t *reports = nullptr;
+
+  esp_err_t ret = esp_hidh_dev_reports_get(dev, &num_reports, &reports);
+  if (ret != ESP_OK)
+  {
+    ESP_LOGE(TAG, "Error get reports: ", esp_err_to_name(ret));
+    return false;
+  }
+
+  for (int i = 0; i < num_reports; i++)
+  {
+    if (reports[i].report_type == ESP_HID_REPORT_TYPE_OUTPUT && reports[i].usage == ESP_HID_USAGE_KEYBOARD)
+    {
+      report_id = reports[i].report_id;
+      map_index = reports[i].map_index;
+      free(reports);
+      return true;
+    }
+  }
+
+  if (reports != nullptr)
+    free(reports);
+
+  return false;  // no OUTPUT report found
+}
+
 void BTKeyboard::hidh_callback(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
 {
   esp_hidh_event_t event = (esp_hidh_event_t)id;
@@ -1229,6 +1286,12 @@ void BTKeyboard::hidh_callback(void *handler_args, esp_event_base_t base, int32_
         // as it could connect outside the SCAN routines at boot
         lastConnected.transport = tra;
         std::copy(bda, bda + ESP_BD_ADDR_LEN, lastConnected.bda);
+        LED_DEVICE_MAP_LOCK();
+        size_t map_index;
+        size_t report_id;
+        if (find_output_report(param->open.dev, map_index, report_id))
+          led_device_map[bda_to_string(bda)] = { param->input.dev, map_index, report_id };
+        LED_DEVICE_MAP_UNLOCK();
       }
       else
       {
@@ -1338,6 +1401,12 @@ void BTKeyboard::hidh_callback(void *handler_args, esp_event_base_t base, int32_
     {
       const uint8_t *bda = esp_hidh_dev_bda_get(param->close.dev);
       ESP_LOGI(TAG, ESP_BD_ADDR_STR " CLOSE: %s REASON: %i", ESP_BD_ADDR_HEX(bda), esp_hidh_dev_name_get(param->close.dev), param->close.reason);
+
+      LED_DEVICE_MAP_LOCK();
+      auto it = led_device_map.find(bda_to_string(esp_hidh_dev_bda_get(param->close.dev)));
+      if (it != led_device_map.end())
+        led_device_map.erase(it);
+      LED_DEVICE_MAP_UNLOCK();
     }
     isConnected = false;
     break;
@@ -1874,4 +1943,19 @@ int16_t BTKeyboard::getBits(const void *Data, uint16_t StartBit, uint16_t NumBit
   }
 
   return data;
+}
+
+void BTKeyboard::set_leds(uint8_t leds)
+{
+  LED_DEVICE_MAP_LOCK();
+  for (auto& pair: led_device_map)
+  {
+    led_device_info &info = pair.second;
+    esp_err_t ret = esp_hidh_dev_output_set(info.dev, info.map_index, info.report_id, &leds, 1);
+    if (ret != ESP_OK)
+    {
+      ESP_LOGE(TAG, "Failed to set LED state: %s", esp_err_to_name(ret));
+    }
+  }
+  LED_DEVICE_MAP_UNLOCK();
 }

@@ -8,15 +8,15 @@ Dedicated to all who love me and all who I love.
 Never stop dreaming.
 */
 
-#include "..\include\globals.hpp"
+#include "globals.hpp"
 #include "nvs_flash.h"
 #include "esp_system.h"
-#include "driver\gpio.h"
+#include "driver/gpio.h"
 #include <iostream>
 #include <cmath>
-#include "..\include\bt_keyboard.hpp" // Interface with a BT/BLE peripheral device (Keyboard & Mouse)
-#include "..\include\esp32-ps2dev.h"  // Emulate a PS/2 device
-#include "..\include\serial_mouse.h"  // Emulate a serial mouse
+#include "bt_keyboard.hpp" // Interface with a BT/BLE peripheral device (Keyboard & Mouse)
+#include "esp32-ps2dev.h"  // Emulate a PS/2 device
+#include "serial_mouse.h"  // Emulate a serial mouse
 
 /////////////////////////////// USER ADJUSTABLE VARIABLES //////////////////////////////////////////////////
 
@@ -42,6 +42,7 @@ static bool bleNowScanning = false;   // BLE scanning daemon in course flag
 static bool codeHandlerActive = false;
 void mouse_task(void *arg);
 void ble_connection_daemon(void *arg);
+void set_leds_cb(uint8_t leds);
 TaskHandle_t pairing_task_handle;
 
 esp32_ps2dev::PS2Mouse mouse(MOUSE_CLK_PIN, MOUSE_DATA_PIN);
@@ -224,6 +225,7 @@ extern "C"
 
         mouse.begin(true); // true parameter indicates we want to recover previous mouse state from NVS
         keyboard.begin();
+        keyboard.set_leds_callback(set_leds_cb);
         mouse_serial.setup(SERIAL_MOUSE_RS232_RTS, SERIAL_MOUSE_RS232_RX);
 
         gpio_set_level(GPIO_NUM_2, 0);
@@ -692,4 +694,18 @@ void ble_connection_daemon(void *arg)
                 vTaskDelay(5000 / portTICK_PERIOD_MS);
         }
     }
+}
+
+void set_leds_cb(uint8_t leds)
+{
+  uint8_t bt_leds = 0;
+
+  if (leds & esp32_ps2dev::PS2Keyboard::KeyLed::KEYBOARD_LED_SCROLLLOCK)
+    bt_leds |= BTKeyboard::KeyLed::KEYBOARD_LED_SCROLLLOCK;
+  if (leds & esp32_ps2dev::PS2Keyboard::KeyLed::KEYBOARD_LED_NUMLOCK)
+    bt_leds |= BTKeyboard::KeyLed::KEYBOARD_LED_NUMLOCK;
+  if (leds & esp32_ps2dev::PS2Keyboard::KeyLed::KEYBOARD_LED_CAPSLOCK)
+    bt_leds |= BTKeyboard::KeyLed::KEYBOARD_LED_CAPSLOCK;
+
+  bt_keyboard.set_leds(bt_leds);
 }

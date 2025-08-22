@@ -44,6 +44,7 @@
 
 #include <vector>
 #include <map>
+#include <string>
 
 // #include "esp32-hal-bt.h"
 
@@ -64,6 +65,15 @@ public:
     R_SHIFT = 0x20,
     R_ALT = 0x40,
     R_META = 0x80
+  };
+
+  enum KeyLed : uint8_t
+  {
+    KEYBOARD_LED_NUMLOCK = 1 << 0,
+    KEYBOARD_LED_CAPSLOCK = 1 << 1,
+    KEYBOARD_LED_SCROLLLOCK = 1 << 2,
+    KEYBOARD_LED_COMPOSE = 1 << 3,
+    KEYBOARD_LED_KANA = 1 << 4
   };
 
   const uint8_t CTRL_MASK = ((uint8_t)KeyModifier::L_CTRL) | ((uint8_t)KeyModifier::R_CTRL);
@@ -119,6 +129,7 @@ private:
 
   static SemaphoreHandle_t bt_hidh_cb_semaphore;
   static SemaphoreHandle_t ble_hidh_cb_semaphore;
+  static SemaphoreHandle_t led_device_map_semaphore;
 
   struct esp_hid_scan_result_t
   {
@@ -216,6 +227,14 @@ private:
   static std::map<std::pair<esp_hidh_dev_t *, uint16_t>, hid_report_mouse> mouse_reports;
   static KeyInfo infoKey;
 
+  typedef struct {
+    esp_hidh_dev_t *dev;
+    size_t map_index;
+    size_t report_id;
+  } led_device_info;
+
+  static std::map<std::string, led_device_info> led_device_map;
+
   typedef enum
   {
     PARSE_WAIT_USAGE_PAGE,
@@ -293,6 +312,8 @@ private:
   esp_err_t start_bt_scan(uint32_t seconds);
   esp_err_t esp_hid_scan(uint32_t seconds, size_t *num_results, esp_hid_scan_result_t **results, bool enable_bt_classic);
 
+  static bool find_output_report(esp_hidh_dev_t *dev, size_t &map_index, size_t &report_id);
+
   inline void set_battery_level(uint8_t level) { battery_level = level; }
 
   void push_key(uint8_t *keys, uint8_t size);
@@ -350,6 +371,8 @@ public:
   inline char get_ascii_char() { return wait_for_ascii_char(false); }
 
   void quick_reconnect(void);
+
+  static void set_leds(uint8_t leds);
 
   static bool isConnected; // hidh callback event CLOSE turns this false when kb disconnects
   static bool btFound;     // found a BT (not BLE) device during scan, let's wait for pairing
